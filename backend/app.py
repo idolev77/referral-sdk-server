@@ -12,7 +12,7 @@ or:
 """
 import logging
 
-from flask import Flask, jsonify
+from flask import Flask, jsonify, redirect
 from flask_cors import CORS
 
 from blueprints.admin import admin_bp
@@ -43,6 +43,13 @@ def create_app(config_class: type = Config) -> Flask:
     @app.get("/health")
     def health():
         return jsonify(status="ok")
+
+    @app.get("/i/<code>")
+    def invite_redirect(code: str):
+        """Public deep-link redirect — no auth required.
+        Anyone who clicks the invite_link is sent to the app via the custom scheme.
+        """
+        return redirect(f"referralsdk://invite?code={code}", code=302)
 
     @app.errorhandler(404)
     def not_found(_):

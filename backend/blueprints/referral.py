@@ -69,7 +69,7 @@ def generate():
     base = request.host_url.rstrip("/")
     return jsonify(
         invite_code=user.invite_code,
-        invite_link=f"{base}/r/{user.invite_code}",
+        invite_link=f"{base}/i/{user.invite_code}",
         deep_link=f"referralsdk://invite?code={user.invite_code}",
     )
 
