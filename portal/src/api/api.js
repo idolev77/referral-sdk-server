@@ -3,18 +3,12 @@
  *
  * Wraps the Flask backend with Axios. Every request carries the
  * x-api-key / x-project-id headers the backend requires.
- *
- * Live mode (default): returns only real data from the server.
- * Mock mode (VITE_USE_MOCK=true): returns static mock data — for UI demos only,
- * nothing ever touches the database.
  */
 import axios from "axios";
-import * as mock from "../data/mockData";
 
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 const PROJECT_ID = import.meta.env.VITE_PROJECT_ID || "proj_demo_local";
 const API_KEY = import.meta.env.VITE_API_KEY || "demo_api_key_local_dev";
-export const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 const client = axios.create({
   baseURL: BASE_URL,
@@ -26,61 +20,29 @@ const client = axios.create({
   },
 });
 
-/**
- * In live mode: calls the real API and returns exactly what the server sends.
- * Never substitutes mock data — errors are thrown so components can show a
- * real error/empty state.
- *
- * In mock mode (VITE_USE_MOCK=true): returns the static mock value.
- */
-async function call(liveFn, mockValue) {
-  if (USE_MOCK) {
-    return typeof structuredClone === "function"
-      ? structuredClone(mockValue)
-      : JSON.parse(JSON.stringify(mockValue));
-  }
-  const { data } = await liveFn();
-  return data;
-}
-
 /* ----------------------------- Dashboard ------------------------------ */
 export const getOverview = () =>
-  call(() => client.get("/admin/overview"), {
-    stats: mock.overviewStats,
-    funnel: mock.funnelData,
-  });
+  client.get("/admin/overview").then((r) => r.data);
 
 export const getActivity = (limit = 25) =>
-  call(() => client.get("/admin/activity", { params: { limit } }), {
-    events: mock.activityFeed,
-  });
+  client.get("/admin/activity", { params: { limit } }).then((r) => r.data);
 
 /* --------------------------- Demographics ----------------------------- */
 export const getDemographics = () =>
-  call(() => client.get("/admin/demographics"), {
-    countries: mock.geoDistribution,
-  });
+  client.get("/admin/demographics").then((r) => r.data);
 
 export const getStability = () =>
-  call(() => client.get("/admin/stability"), {
-    health_score: mock.healthScore,
-    timeline: mock.crashTimeline,
-  });
+  client.get("/admin/stability").then((r) => r.data);
 
 export const getFraudLogs = (limit = 50) =>
-  call(() => client.get("/admin/fraud-logs", { params: { limit } }), {
-    logs: mock.fraudLogs,
-  });
+  client.get("/admin/fraud-logs", { params: { limit } }).then((r) => r.data);
 
 /* ------------------------ Remote config / rules ----------------------- */
 export const getConfig = () =>
-  call(() => client.get("/admin/config"), { config: mock.remoteConfig });
+  client.get("/admin/config").then((r) => r.data);
 
-export const updateConfig = async (config) => {
-  if (USE_MOCK) return { status: "synced", config };
-  const { data } = await client.put("/admin/config", config);
-  return data;
-};
+export const updateConfig = (config) =>
+  client.put("/admin/config", config).then((r) => r.data);
 
 /* --------------------------- SDK endpoints ---------------------------- */
 export const generateReferral = (user_id) =>
