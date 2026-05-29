@@ -1,0 +1,45 @@
+# ─── Python / Backend ───────────────────────────────────────────────────────
+__pycache__/
+*.py[cod]
+*.pyo
+*.pyd
+*.so
+*.egg
+*.egg-info/
+dist/
+build/
+.eggs/
+.venv/
+venv/
+ENV/
+env/
+.Python
+pip-log.txt
+pip-delete-this-directory.txt
+
+# Environment files (contain secrets!)
+backend/.env
+backend/*.env
+
+# MaxMind Geo-IP database (binary, large)
+*.mmdb
+
+# ─── Node / Portal ──────────────────────────────────────────────────────────
+portal/node_modules/
+portal/dist/
+portal/.env
+portal/*.env
+
+# ─── OS & Editors ───────────────────────────────────────────────────────────
+.DS_Store
+Thumbs.db
+desktop.ini
+.idea/
+.vscode/
+*.swp
+*.swo
+
+# ─── Misc ───────────────────────────────────────────────────────────────────
+*.log
+*.sqlite3
+*.db
