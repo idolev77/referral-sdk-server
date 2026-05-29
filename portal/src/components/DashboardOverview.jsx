@@ -25,8 +25,10 @@ import {
   Users,
 } from "lucide-react";
 
-import { getActivity, getOverview } from "../api/api";
+import { getActivity, getLeaderboard, getOverview } from "../api/api";
 import { Badge, Card, CHART_COLORS, Skeleton, StatCard } from "./ui";
+
+const RANK_ICONS = ["🥇", "🥈", "🥉"];
 
 const EVENT_TONE = {
   generated: "indigo",
@@ -64,6 +66,7 @@ function timeAgo(iso) {
 export default function DashboardOverview() {
   const [overview, setOverview] = useState(null);
   const [events, setEvents] = useState([]);
+  const [leaders, setLeaders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState(null);
 
@@ -71,10 +74,15 @@ export default function DashboardOverview() {
     let alive = true;
     async function load() {
       try {
-        const [ov, act] = await Promise.all([getOverview(), getActivity(20)]);
+        const [ov, act, lb] = await Promise.all([
+          getOverview(),
+          getActivity(20),
+          getLeaderboard(10),
+        ]);
         if (!alive) return;
         setOverview(ov);
         setEvents(act.events || []);
+        setLeaders(lb.leaderboard || []);
       } catch (e) {
         if (alive) setError("Could not reach the backend API.");
       } finally {
@@ -303,6 +311,70 @@ export default function DashboardOverview() {
                       </td>
                       <td className="py-3 text-right text-xs text-slate-500">
                         {timeAgo(e.created_at)}
+                      </td>
+                    </tr>
+                  ))}
+            </tbody>
+          </table>
+        </div>
+      </Card>
+
+      {/* Leaderboard */}
+      <Card
+        title="Top Referrers"
+        action={
+          <span className="flex items-center gap-1.5 text-xs text-amber-400">
+            🏆 Leaderboard
+          </span>
+        }
+      >
+        <div className="overflow-x-auto">
+          <table className="w-full text-left text-sm">
+            <thead>
+              <tr className="text-xs uppercase tracking-wide text-slate-500">
+                <th className="pb-3 pr-4 font-medium">Rank</th>
+                <th className="pb-3 pr-4 font-medium">User</th>
+                <th className="pb-3 pr-4 font-medium">Invite Code</th>
+                <th className="pb-3 pr-4 font-medium">Country</th>
+                <th className="pb-3 pr-4 font-medium text-right">Referrals</th>
+                <th className="pb-3 font-medium text-right">Points</th>
+              </tr>
+            </thead>
+            <tbody className="divide-y divide-white/5">
+              {loading
+                ? Array.from({ length: 5 }).map((_, i) => (
+                    <tr key={i}>
+                      <td colSpan={6} className="py-3">
+                        <Skeleton className="h-5" />
+                      </td>
+                    </tr>
+                  ))
+                : leaders.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-16 text-center text-slate-500">
+                        <p className="text-3xl">🏅</p>
+                        <p className="mt-2 text-sm font-medium">No referrers yet.</p>
+                        <p className="text-xs">Use the SDK Playground to generate your first referral.</p>
+                      </td>
+                    </tr>
+                  )
+                : leaders.map((l) => (
+                    <tr key={l.rank} className="text-slate-300 transition hover:bg-white/5">
+                      <td className="py-3 pr-4 text-lg">
+                        {RANK_ICONS[l.rank - 1] ?? (
+                          <span className="font-mono text-sm text-slate-500">#{l.rank}</span>
+                        )}
+                      </td>
+                      <td className="py-3 pr-4 font-mono text-xs">{l.user_id}</td>
+                      <td className="py-3 pr-4 font-mono text-xs text-brand-300">
+                        {l.invite_code || "—"}
+                      </td>
+                      <td className="py-3 pr-4 text-slate-400">{l.country || "Unknown"}</td>
+                      <td className="py-3 pr-4 text-right font-semibold text-sky-300">
+                        {l.referrals}
+                      </td>
+                      <td className="py-3 text-right font-semibold text-emerald-400">
+                        +{l.points.toLocaleString()}
                       </td>
                     </tr>
                   ))}

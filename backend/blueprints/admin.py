@@ -9,7 +9,7 @@ from datetime import datetime, timedelta, timezone
 from flask import Blueprint, g, jsonify, request
 from sqlalchemy import func
 
-from models import Project, ReferralEvent, User, db
+from models import ConfigChange, Project, ReferralEvent, User, db
 from security import require_credentials
 
 admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
@@ -148,6 +148,51 @@ def fraud_logs():
     return jsonify(logs=[e.to_dict() for e in events])
 
 
+@admin_bp.get("/leaderboard")
+@require_credentials
+def leaderboard():
+    """Top referrers ranked by successful attributions."""
+    project = g.project
+    limit = min(int(request.args.get("limit", 10)), 50)
+
+    rows = (
+        db.session.query(
+            User.user_id,
+            User.invite_code,
+            User.points_balance,
+            User.country,
+            func.count(ReferralEvent.id).label("referral_count"),
+        )
+        .outerjoin(
+            ReferralEvent,
+            (ReferralEvent.invite_code == User.invite_code)
+            & (ReferralEvent.event_type == ReferralEvent.EVENT_ATTRIBUTED)
+            & (ReferralEvent.project_pk == project.id),
+        )
+        .filter(User.project_pk == project.id)
+        .group_by(
+            User.id, User.user_id, User.invite_code, User.points_balance, User.country
+        )
+        .order_by(func.count(ReferralEvent.id).desc())
+        .limit(limit)
+        .all()
+    )
+
+    return jsonify(
+        leaderboard=[
+            {
+                "rank": i + 1,
+                "user_id": r.user_id,
+                "invite_code": r.invite_code,
+                "points": r.points_balance or 0,
+                "referrals": r.referral_count or 0,
+                "country": r.country,
+            }
+            for i, r in enumerate(rows)
+        ]
+    )
+
+
 @admin_bp.get("/config")
 @require_credentials
 def get_config():
@@ -158,24 +203,75 @@ def get_config():
 @admin_bp.put("/config")
 @require_credentials
 def update_config():
-    """Update remote rules (Save & Sync) and persist to PostgreSQL."""
+    """Update remote rules (Save & Sync), persist to PostgreSQL, and log every change."""
     data = request.get_json(silent=True) or {}
     project: Project = g.project
+    changes: list[ConfigChange] = []
+
+    def _log(field: str, old, new):
+        if str(old) != str(new):
+            changes.append(
+                ConfigChange(
+                    project_pk=project.id,
+                    field=field,
+                    old_value=str(old),
+                    new_value=str(new),
+                )
+            )
 
     if "points_per_referral" in data:
         try:
-            project.points_per_referral = max(0, int(data["points_per_referral"]))
+            new_val = max(0, int(data["points_per_referral"]))
         except (TypeError, ValueError):
             return jsonify(error="points_per_referral must be an integer"), 400
+        _log("points_per_referral", project.points_per_referral, new_val)
+        project.points_per_referral = new_val
 
     if "fraud_detection_enabled" in data:
-        project.fraud_detection_enabled = bool(data["fraud_detection_enabled"])
+        new_val = bool(data["fraud_detection_enabled"])
+        _log("fraud_detection_enabled", project.fraud_detection_enabled, new_val)
+        project.fraud_detection_enabled = new_val
 
     if "rate_limit_per_minute" in data:
         try:
-            project.rate_limit_per_minute = max(1, int(data["rate_limit_per_minute"]))
+            new_val = max(1, int(data["rate_limit_per_minute"]))
         except (TypeError, ValueError):
             return jsonify(error="rate_limit_per_minute must be an integer"), 400
+        _log("rate_limit_per_minute", project.rate_limit_per_minute, new_val)
+        project.rate_limit_per_minute = new_val
 
+    if "welcome_bonus" in data:
+        try:
+            new_val = max(0, int(data["welcome_bonus"]))
+        except (TypeError, ValueError):
+            return jsonify(error="welcome_bonus must be an integer"), 400
+        _log("welcome_bonus", project.welcome_bonus, new_val)
+        project.welcome_bonus = new_val
+
+    if "max_referrals_per_user" in data:
+        try:
+            new_val = max(0, int(data["max_referrals_per_user"]))
+        except (TypeError, ValueError):
+            return jsonify(error="max_referrals_per_user must be an integer"), 400
+        _log("max_referrals_per_user", project.max_referrals_per_user, new_val)
+        project.max_referrals_per_user = new_val
+
+    for change in changes:
+        db.session.add(change)
     db.session.commit()
-    return jsonify(status="synced", config=project.to_dict())
+    return jsonify(status="synced", config=project.to_dict(), changes_logged=len(changes))
+
+
+@admin_bp.get("/config-audit")
+@require_credentials
+def config_audit():
+    """Return the full audit trail of config changes for this project."""
+    project = g.project
+    limit = min(int(request.args.get("limit", 50)), 200)
+    entries = (
+        ConfigChange.query.filter_by(project_pk=project.id)
+        .order_by(ConfigChange.changed_at.desc())
+        .limit(limit)
+        .all()
+    )
+    return jsonify(audit=[e.to_dict() for e in entries])

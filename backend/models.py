@@ -38,6 +38,8 @@ class Project(db.Model):
     points_per_referral = db.Column(db.Integer, nullable=False, default=100)
     fraud_detection_enabled = db.Column(db.Boolean, nullable=False, default=True)
     rate_limit_per_minute = db.Column(db.Integer, nullable=False, default=5)
+    welcome_bonus = db.Column(db.Integer, nullable=False, default=0)
+    max_referrals_per_user = db.Column(db.Integer, nullable=False, default=0)  # 0 = unlimited
 
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
     updated_at = db.Column(
@@ -59,6 +61,8 @@ class Project(db.Model):
             "points_per_referral": self.points_per_referral,
             "fraud_detection_enabled": self.fraud_detection_enabled,
             "rate_limit_per_minute": self.rate_limit_per_minute,
+            "welcome_bonus": self.welcome_bonus,
+            "max_referrals_per_user": self.max_referrals_per_user,
             "created_at": self.created_at.isoformat() if self.created_at else None,
             "updated_at": self.updated_at.isoformat() if self.updated_at else None,
         }
@@ -143,4 +147,28 @@ class ReferralEvent(db.Model):
             "ip_address": self.ip_address,
             "points_delta": self.points_delta,
             "created_at": self.created_at.isoformat() if self.created_at else None,
+        }
+
+
+class ConfigChange(db.Model):
+    """Immutable audit trail for every remote-config update via the portal."""
+
+    __tablename__ = "config_changes"
+
+    id = db.Column(db.Integer, primary_key=True)
+    project_pk = db.Column(
+        db.Integer, db.ForeignKey("projects.id", ondelete="CASCADE"), nullable=False
+    )
+    field = db.Column(db.String(64), nullable=False)
+    old_value = db.Column(db.String(256), nullable=True)
+    new_value = db.Column(db.String(256), nullable=True)
+    changed_at = db.Column(db.DateTime(timezone=True), default=_utcnow, index=True)
+
+    def to_dict(self) -> dict:
+        return {
+            "id": self.id,
+            "field": self.field,
+            "old_value": self.old_value,
+            "new_value": self.new_value,
+            "changed_at": self.changed_at.isoformat() if self.changed_at else None,
         }

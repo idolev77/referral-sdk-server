@@ -2,8 +2,9 @@
  * CampaignSettings
  *
  * Interactive remote-rules editor: toggle fraud detection, set points per
- * referral and adjust the rate limit. "Save & Sync" persists to PostgreSQL via
- * PUT /api/admin/config.
+ * referral, adjust rate limit, welcome bonus, and max referrals.
+ * "Save & Sync" persists to PostgreSQL via PUT /api/admin/config.
+ * Config Audit Log section shows every historical change.
  */
 import React, { useEffect, useState } from "react";
 import {
@@ -13,9 +14,13 @@ import {
   ShieldCheck,
   Sparkles,
   Gauge,
+  Gift,
+  Users,
+  History,
+  ArrowRight,
 } from "lucide-react";
 
-import { getConfig, updateConfig } from "../api/api";
+import { getConfig, updateConfig, getConfigAudit } from "../api/api";
 import { Badge, Card, Skeleton } from "./ui";
 
 function Toggle({ checked, onChange }) {
@@ -45,6 +50,16 @@ export default function CampaignSettings() {
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
   const [error, setError] = useState(null);
+  const [audit, setAudit] = useState([]);
+  const [auditLoading, setAuditLoading] = useState(false);
+
+  const fetchAudit = () => {
+    setAuditLoading(true);
+    getConfigAudit(30)
+      .then((res) => setAudit(res.audit || []))
+      .catch(() => {})
+      .finally(() => setAuditLoading(false));
+  };
 
   useEffect(() => {
     let alive = true;
@@ -60,15 +75,15 @@ export default function CampaignSettings() {
       .finally(() => {
         if (alive) setLoading(false);
       });
+    fetchAudit();
     return () => { alive = false; };
   }, []);
 
+  const TRACKED = ["points_per_referral", "fraud_detection_enabled", "rate_limit_per_minute", "welcome_bonus", "max_referrals_per_user"];
   const dirty =
     draft &&
     config &&
-    (draft.points_per_referral !== config.points_per_referral ||
-      draft.fraud_detection_enabled !== config.fraud_detection_enabled ||
-      draft.rate_limit_per_minute !== config.rate_limit_per_minute);
+    TRACKED.some((k) => String(draft[k]) !== String(config[k]));
 
   const patch = (key, value) => {
     setDraft((d) => ({ ...d, [key]: value }));
@@ -82,11 +97,14 @@ export default function CampaignSettings() {
       points_per_referral: Number(draft.points_per_referral),
       fraud_detection_enabled: draft.fraud_detection_enabled,
       rate_limit_per_minute: Number(draft.rate_limit_per_minute),
+      welcome_bonus: Number(draft.welcome_bonus),
+      max_referrals_per_user: Number(draft.max_referrals_per_user),
     });
     setConfig(res.config);
     setDraft(res.config);
     setSaving(false);
     setSaved(true);
+    fetchAudit(); // refresh audit log after save
     setTimeout(() => setSaved(false), 2500);
   };
 
@@ -222,6 +240,70 @@ export default function CampaignSettings() {
             </div>
           </div>
         </Card>
+
+        {/* Welcome Bonus */}
+        <Card title="Welcome Bonus">
+          <div className="flex items-center gap-3">
+            <span className="rounded-xl bg-pink-500/10 p-2.5 text-pink-400">
+              <Gift size={20} />
+            </span>
+            <p className="text-xs text-slate-400">Points awarded to a user when first referred by another user.</p>
+          </div>
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              onClick={() => patch("welcome_bonus", Math.max(0, Number(draft.welcome_bonus) - 10))}
+              className="h-10 w-10 rounded-lg border border-white/10 text-lg text-slate-300 transition hover:bg-white/5"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              min="0"
+              value={draft.welcome_bonus ?? 0}
+              onChange={(e) => patch("welcome_bonus", e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-ink-900/60 px-4 py-2 text-center text-2xl font-bold text-white outline-none focus:border-brand-500"
+            />
+            <button
+              onClick={() => patch("welcome_bonus", Number(draft.welcome_bonus) + 10)}
+              className="h-10 w-10 rounded-lg border border-white/10 text-lg text-slate-300 transition hover:bg-white/5"
+            >
+              +
+            </button>
+          </div>
+          <p className="mt-3 text-xs text-slate-500">Set to 0 to disable welcome bonus.</p>
+        </Card>
+
+        {/* Max referrals per user */}
+        <Card title="Max Referrals / User">
+          <div className="flex items-center gap-3">
+            <span className="rounded-xl bg-violet-500/10 p-2.5 text-violet-400">
+              <Users size={20} />
+            </span>
+            <p className="text-xs text-slate-400">Hard cap on how many successful referrals one user can earn rewards for.</p>
+          </div>
+          <div className="mt-5 flex items-center gap-3">
+            <button
+              onClick={() => patch("max_referrals_per_user", Math.max(0, Number(draft.max_referrals_per_user) - 1))}
+              className="h-10 w-10 rounded-lg border border-white/10 text-lg text-slate-300 transition hover:bg-white/5"
+            >
+              −
+            </button>
+            <input
+              type="number"
+              min="0"
+              value={draft.max_referrals_per_user ?? 0}
+              onChange={(e) => patch("max_referrals_per_user", e.target.value)}
+              className="w-full rounded-lg border border-white/10 bg-ink-900/60 px-4 py-2 text-center text-2xl font-bold text-white outline-none focus:border-brand-500"
+            />
+            <button
+              onClick={() => patch("max_referrals_per_user", Number(draft.max_referrals_per_user) + 1)}
+              className="h-10 w-10 rounded-lg border border-white/10 text-lg text-slate-300 transition hover:bg-white/5"
+            >
+              +
+            </button>
+          </div>
+          <p className="mt-3 text-xs text-slate-500">0 = unlimited referrals per user.</p>
+        </Card>
       </div>
 
       {/* Save bar */}
@@ -261,6 +343,57 @@ export default function CampaignSettings() {
             )}
           </button>
         </div>
+      </div>
+
+      {/* ── Config Audit Log ─────────────────────────────────── */}
+      <div className="rounded-xl border border-ink-700 overflow-hidden">
+        <div className="flex items-center justify-between bg-ink-850 px-5 py-3 border-b border-ink-700">
+          <h2 className="font-semibold text-white flex items-center gap-2">
+            <History size={16} className="text-brand-500" /> Config Change Audit Log
+          </h2>
+          <button
+            onClick={fetchAudit}
+            className="text-xs text-slate-400 hover:text-white flex items-center gap-1 transition-colors"
+          >
+            <RefreshCw size={12} /> Refresh
+          </button>
+        </div>
+        {auditLoading ? (
+          <div className="p-6 space-y-3">
+            {[...Array(3)].map((_, i) => <Skeleton key={i} className="h-10" />)}
+          </div>
+        ) : audit.length === 0 ? (
+          <div className="p-8 text-center text-slate-500 text-sm">
+            No config changes recorded yet. Save & Sync to create the first audit entry.
+          </div>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-left">
+              <thead>
+                <tr className="bg-ink-800 text-xs text-slate-500 uppercase tracking-wide">
+                  <th className="px-4 py-3">Field</th>
+                  <th className="px-4 py-3">Before</th>
+                  <th className="px-4 py-3"></th>
+                  <th className="px-4 py-3">After</th>
+                  <th className="px-4 py-3">Changed At (UTC)</th>
+                </tr>
+              </thead>
+              <tbody className="bg-ink-900">
+                {audit.map((row) => (
+                  <tr key={row.id} className="border-b border-ink-700 hover:bg-ink-800/50">
+                    <td className="px-4 py-3 font-mono text-sm text-brand-400">{row.field}</td>
+                    <td className="px-4 py-3 font-mono text-sm text-red-300 line-through opacity-70">{row.old_value}</td>
+                    <td className="px-4 py-3 text-slate-600"><ArrowRight size={14} /></td>
+                    <td className="px-4 py-3 font-mono text-sm text-green-300">{row.new_value}</td>
+                    <td className="px-4 py-3 text-xs text-slate-500">
+                      {new Date(row.changed_at).toLocaleString()}
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

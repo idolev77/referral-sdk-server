@@ -12,15 +12,15 @@ or:
 """
 import logging
 
-from flask import Flask, jsonify, redirect
+from flask import Flask, jsonify, redirect, render_template_string, request
 from flask_cors import CORS
 
 from blueprints.admin import admin_bp
 from blueprints.referral import referral_bp
 from config import Config
 from extensions import init_redis
-from geoip_service import init_geoip
-from models import Project, db
+from geoip_service import get_client_ip, init_geoip, resolve_country
+from models import Project, ReferralEvent, User, db
 
 logging.basicConfig(level=logging.INFO)
 
@@ -44,12 +44,62 @@ def create_app(config_class: type = Config) -> Flask:
     def health():
         return jsonify(status="ok")
 
+    _INVITE_PAGE = """<!doctype html>
+<html lang="en"><head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Opening invite…</title>
+<style>
+  body{font-family:system-ui,-apple-system,Segoe UI,Roboto,sans-serif;
+       background:#0b1020;color:#e2e8f0;display:flex;min-height:100vh;
+       align-items:center;justify-content:center;margin:0;text-align:center}
+  .card{padding:32px;max-width:360px}
+  a.btn{display:inline-block;margin-top:20px;padding:14px 28px;border-radius:14px;
+        background:#6366f1;color:#fff;text-decoration:none;font-weight:700;font-size:16px}
+  .code{font-family:monospace;color:#a5b4fc;font-size:18px}
+  p{color:#94a3b8;font-size:14px;margin-top:12px}
+</style></head>
+<body><div class="card">
+  <h2>🎉 You've been invited!</h2>
+  <p>Invite code: <span class="code">{{ code }}</span></p>
+  <a class="btn" href="{{ deep_link }}">Open App</a>
+  <p>Tap the button above to open the app and claim your invite.</p>
+  <script>
+    // Attempt auto-open — works in some browsers/WebViews.
+    setTimeout(function(){ window.location.href = "{{ deep_link }}"; }, 400);
+  </script>
+</div></body></html>"""
+
     @app.get("/i/<code>")
     def invite_redirect(code: str):
-        """Public deep-link redirect — no auth required.
-        Anyone who clicks the invite_link is sent to the app via the custom scheme.
         """
-        return redirect(f"referralsdk://invite?code={code}", code=302)
+        Public invite landing page — no auth required.
+
+        Two responsibilities:
+          1. Record a `click` event immediately (so the dashboard Conversion Funnel
+             shows 'Clicked' even before the user opens the app).
+          2. Return an HTML interstitial with a tap-able link to `referralsdk://invite?code=…`
+             instead of a bare 302 redirect. Browsers block automatic redirects to custom
+             schemes; a user-initiated tap is always allowed.
+        """
+        code = (code or "").upper().strip()
+
+        inviter = User.query.filter_by(invite_code=code).first()
+        if inviter is not None:
+            ip = get_client_ip(request)
+            db.session.add(
+                ReferralEvent(
+                    project_pk=inviter.project_pk,
+                    event_type=ReferralEvent.EVENT_CLICK,
+                    invite_code=code,
+                    ip_address=ip,
+                    country=resolve_country(ip),
+                )
+            )
+            db.session.commit()
+
+        deep_link = f"referralsdk://invite?code={code}"
+        return render_template_string(_INVITE_PAGE, code=code, deep_link=deep_link)
 
     @app.errorhandler(404)
     def not_found(_):

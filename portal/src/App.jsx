@@ -3,22 +3,31 @@
  */
 import React, { useState } from "react";
 import {
-  LayoutDashboard,
+  FlaskConical,
   Globe2,
-  SlidersHorizontal,
+  LayoutDashboard,
   Moon,
-  Sun,
   Rocket,
+  SlidersHorizontal,
+  Sun,
+  TrendingUp,
+  BookOpen,
 } from "lucide-react";
 
 import DashboardOverview from "./components/DashboardOverview.jsx";
 import GeoAndStability from "./components/GeoAndStability.jsx";
 import CampaignSettings from "./components/CampaignSettings.jsx";
+import GrowthSimulator from "./components/GrowthSimulator.jsx";
+import SdkPlayground from "./components/SdkPlayground.jsx";
+import IntegrationGuide from "./components/IntegrationGuide.jsx";
 
 const NAV = [
   { id: "overview", label: "Overview", icon: LayoutDashboard, Component: DashboardOverview },
   { id: "geo", label: "Demographics & Stability", icon: Globe2, Component: GeoAndStability },
   { id: "rules", label: "Campaign Manager", icon: SlidersHorizontal, Component: CampaignSettings },
+  { id: "simulator", label: "Growth Simulator", icon: TrendingUp, Component: GrowthSimulator },
+  { id: "playground", label: "SDK Playground", icon: FlaskConical, Component: SdkPlayground },
+  { id: "guide", label: "Integration Guide", icon: BookOpen, Component: IntegrationGuide },
 ];
 
 export default function App() {

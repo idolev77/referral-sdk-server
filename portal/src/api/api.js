@@ -44,6 +44,12 @@ export const getConfig = () =>
 export const updateConfig = (config) =>
   client.put("/admin/config", config).then((r) => r.data);
 
+export const getLeaderboard = (limit = 10) =>
+  client.get("/admin/leaderboard", { params: { limit } }).then((r) => r.data);
+
+export const getConfigAudit = (limit = 30) =>
+  client.get("/admin/config-audit", { params: { limit } }).then((r) => r.data);
+
 /* --------------------------- SDK endpoints ---------------------------- */
 export const generateReferral = (user_id) =>
   client.post("/referral/generate", { user_id }).then((r) => r.data);
