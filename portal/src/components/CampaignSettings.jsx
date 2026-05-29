@@ -44,18 +44,23 @@ export default function CampaignSettings() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [saved, setSaved] = useState(false);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let alive = true;
-    getConfig().then((res) => {
-      if (!alive) return;
-      setConfig(res.config);
-      setDraft(res.config);
-      setLoading(false);
-    });
-    return () => {
-      alive = false;
-    };
+    getConfig()
+      .then((res) => {
+        if (!alive) return;
+        setConfig(res.config);
+        setDraft(res.config);
+      })
+      .catch(() => {
+        if (alive) setError("Could not load project config from backend.");
+      })
+      .finally(() => {
+        if (alive) setLoading(false);
+      });
+    return () => { alive = false; };
   }, []);
 
   const dirty =
@@ -89,6 +94,16 @@ export default function CampaignSettings() {
     setDraft(config);
     setSaved(false);
   };
+
+  if (error) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
+        <p className="text-2xl">⚠️</p>
+        <p className="font-semibold text-rose-400">{error}</p>
+        <p className="text-xs text-slate-500">Make sure the Flask backend is running on port 5000.</p>
+      </div>
+    );
+  }
 
   if (loading || !draft) {
     return (

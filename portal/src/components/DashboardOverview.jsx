@@ -26,7 +26,6 @@ import {
 } from "lucide-react";
 
 import { getActivity, getOverview } from "../api/api";
-import { referralTrend } from "../data/mockData";
 import { Badge, Card, CHART_COLORS, Skeleton, StatCard } from "./ui";
 
 const EVENT_TONE = {
@@ -66,21 +65,29 @@ export default function DashboardOverview() {
   const [overview, setOverview] = useState(null);
   const [events, setEvents] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let alive = true;
     async function load() {
-      const [ov, act] = await Promise.all([getOverview(), getActivity(20)]);
-      if (!alive) return;
-      setOverview(ov);
-      setEvents(act.events || []);
-      setLoading(false);
+      try {
+        const [ov, act] = await Promise.all([getOverview(), getActivity(20)]);
+        if (!alive) return;
+        setOverview(ov);
+        setEvents(act.events || []);
+      } catch (e) {
+        if (alive) setError("Could not reach the backend API.");
+      } finally {
+        if (alive) setLoading(false);
+      }
     }
     load();
     const t = setInterval(async () => {
-      const act = await getActivity(20);
-      if (alive) setEvents(act.events || []);
-    }, 15000); // live refresh
+      try {
+        const act = await getActivity(20);
+        if (alive) setEvents(act.events || []);
+      } catch (_) {}
+    }, 15000);
     return () => {
       alive = false;
       clearInterval(t);
@@ -94,6 +101,16 @@ export default function DashboardOverview() {
     if (funnel.length < 2 || !funnel[0].value) return 0;
     return ((funnel[funnel.length - 1].value / funnel[0].value) * 100).toFixed(1);
   }, [funnel]);
+
+  if (error) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
+        <p className="text-2xl">⚠️</p>
+        <p className="font-semibold text-rose-400">{error}</p>
+        <p className="text-xs text-slate-500">Make sure the Flask backend is running on port 5000.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -183,31 +200,36 @@ export default function DashboardOverview() {
           )}
         </Card>
 
-        {/* Trend */}
-        <Card title="30-Day Referral Trend">
-          <ResponsiveContainer width="100%" height={300}>
-            <AreaChart data={referralTrend} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
-              <defs>
-                <linearGradient id="refGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="5%" stopColor="#6366f1" stopOpacity={0.5} />
-                  <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
-                </linearGradient>
-              </defs>
-              <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
-              <XAxis dataKey="date" tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} minTickGap={24} />
-              <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} />
-              <Tooltip content={<ChartTooltip />} />
-              <Area
-                type="monotone"
-                dataKey="referrals"
-                name="Referrals"
-                stroke="#818cf8"
-                strokeWidth={2}
-                fill="url(#refGrad)"
-                animationDuration={900}
-              />
-            </AreaChart>
-          </ResponsiveContainer>
+        {/* Trend (built from live events) */}
+        <Card title="Referral Trend">
+          {loading ? (
+            <Skeleton className="h-72" />
+          ) : events.length === 0 ? (
+            <div className="flex h-72 flex-col items-center justify-center gap-2 text-center text-slate-500">
+              <span className="text-4xl">📊</span>
+              <p className="text-sm font-medium">No referral activity yet.</p>
+              <p className="text-xs">Data will appear here once the SDK starts sending events.</p>
+            </div>
+          ) : (
+            <ResponsiveContainer width="100%" height={300}>
+              <AreaChart
+                data={events.filter(e => e.event_type === "attributed").slice(0, 30).reverse()}
+                margin={{ top: 8, right: 8, left: -16, bottom: 0 }}
+              >
+                <defs>
+                  <linearGradient id="refGrad" x1="0" y1="0" x2="0" y2="1">
+                    <stop offset="5%" stopColor="#6366f1" stopOpacity={0.5} />
+                    <stop offset="95%" stopColor="#6366f1" stopOpacity={0} />
+                  </linearGradient>
+                </defs>
+                <CartesianGrid strokeDasharray="3 3" stroke="#ffffff10" vertical={false} />
+                <XAxis dataKey="created_at" tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} tickFormatter={v => v?.slice(5, 10)} minTickGap={24} />
+                <YAxis tick={{ fill: "#64748b", fontSize: 10 }} tickLine={false} axisLine={false} />
+                <Tooltip content={<ChartTooltip />} />
+                <Area type="monotone" dataKey="points_delta" name="Points" stroke="#818cf8" strokeWidth={2} fill="url(#refGrad)" animationDuration={900} />
+              </AreaChart>
+            </ResponsiveContainer>
+          )}
         </Card>
       </div>
 
@@ -245,6 +267,15 @@ export default function DashboardOverview() {
                       </td>
                     </tr>
                   ))
+                : events.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-16 text-center text-slate-500">
+                        <p className="text-3xl">📭</p>
+                        <p className="mt-2 text-sm font-medium">No events yet.</p>
+                        <p className="text-xs">Call the SDK from your app to see live activity here.</p>
+                      </td>
+                    </tr>
+                  )
                 : events.map((e) => (
                     <tr key={e.id} className="text-slate-300 transition hover:bg-white/5">
                       <td className="py-3 pr-4">

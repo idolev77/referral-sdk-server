@@ -2,9 +2,11 @@
  * Portal API client.
  *
  * Wraps the Flask backend with Axios. Every request carries the
- * x-api-key / x-project-id headers the backend requires. When the backend is
- * unreachable (or VITE_USE_MOCK=true) the calls gracefully fall back to the
- * high-fidelity mock dataset so the portal is always demoable.
+ * x-api-key / x-project-id headers the backend requires.
+ *
+ * Live mode (default): returns only real data from the server.
+ * Mock mode (VITE_USE_MOCK=true): returns static mock data — for UI demos only,
+ * nothing ever touches the database.
  */
 import axios from "axios";
 import * as mock from "../data/mockData";
@@ -12,7 +14,7 @@ import * as mock from "../data/mockData";
 const BASE_URL = import.meta.env.VITE_API_BASE_URL || "/api";
 const PROJECT_ID = import.meta.env.VITE_PROJECT_ID || "proj_demo_local";
 const API_KEY = import.meta.env.VITE_API_KEY || "demo_api_key_local_dev";
-const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
+export const USE_MOCK = import.meta.env.VITE_USE_MOCK === "true";
 
 const client = axios.create({
   baseURL: BASE_URL,
@@ -24,68 +26,60 @@ const client = axios.create({
   },
 });
 
-/** Run a live request, falling back to a mock provider on failure. */
-async function withFallback(liveFn, mockValue) {
-  if (USE_MOCK) return structuredCloneSafe(mockValue);
-  try {
-    const { data } = await liveFn();
-    return data;
-  } catch (err) {
-    console.warn("[api] live request failed, using mock data:", err?.message);
-    return structuredCloneSafe(mockValue);
+/**
+ * In live mode: calls the real API and returns exactly what the server sends.
+ * Never substitutes mock data — errors are thrown so components can show a
+ * real error/empty state.
+ *
+ * In mock mode (VITE_USE_MOCK=true): returns the static mock value.
+ */
+async function call(liveFn, mockValue) {
+  if (USE_MOCK) {
+    return typeof structuredClone === "function"
+      ? structuredClone(mockValue)
+      : JSON.parse(JSON.stringify(mockValue));
   }
-}
-
-function structuredCloneSafe(value) {
-  return typeof structuredClone === "function"
-    ? structuredClone(value)
-    : JSON.parse(JSON.stringify(value));
+  const { data } = await liveFn();
+  return data;
 }
 
 /* ----------------------------- Dashboard ------------------------------ */
 export const getOverview = () =>
-  withFallback(() => client.get("/admin/overview"), {
+  call(() => client.get("/admin/overview"), {
     stats: mock.overviewStats,
     funnel: mock.funnelData,
   });
 
 export const getActivity = (limit = 25) =>
-  withFallback(() => client.get("/admin/activity", { params: { limit } }), {
+  call(() => client.get("/admin/activity", { params: { limit } }), {
     events: mock.activityFeed,
   });
 
 /* --------------------------- Demographics ----------------------------- */
 export const getDemographics = () =>
-  withFallback(() => client.get("/admin/demographics"), {
+  call(() => client.get("/admin/demographics"), {
     countries: mock.geoDistribution,
   });
 
 export const getStability = () =>
-  withFallback(() => client.get("/admin/stability"), {
+  call(() => client.get("/admin/stability"), {
     health_score: mock.healthScore,
     timeline: mock.crashTimeline,
   });
 
 export const getFraudLogs = (limit = 50) =>
-  withFallback(() => client.get("/admin/fraud-logs", { params: { limit } }), {
+  call(() => client.get("/admin/fraud-logs", { params: { limit } }), {
     logs: mock.fraudLogs,
   });
 
 /* ------------------------ Remote config / rules ----------------------- */
 export const getConfig = () =>
-  withFallback(() => client.get("/admin/config"), { config: mock.remoteConfig });
+  call(() => client.get("/admin/config"), { config: mock.remoteConfig });
 
 export const updateConfig = async (config) => {
-  if (USE_MOCK) {
-    return { status: "synced", config };
-  }
-  try {
-    const { data } = await client.put("/admin/config", config);
-    return data;
-  } catch (err) {
-    console.warn("[api] config sync failed (mock echo):", err?.message);
-    return { status: "synced", config };
-  }
+  if (USE_MOCK) return { status: "synced", config };
+  const { data } = await client.put("/admin/config", config);
+  return data;
 };
 
 /* --------------------------- SDK endpoints ---------------------------- */

@@ -86,27 +86,41 @@ export default function GeoAndStability() {
   const [timeline, setTimeline] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
 
   useEffect(() => {
     let alive = true;
     async function load() {
-      const [demo, stab, fraud] = await Promise.all([
-        getDemographics(),
-        getStability(),
-        getFraudLogs(50),
-      ]);
-      if (!alive) return;
-      setCountries(demo.countries || []);
-      setHealth(stab.health_score);
-      setTimeline(stab.timeline || []);
-      setLogs(fraud.logs || []);
-      setLoading(false);
+      try {
+        const [demo, stab, fraud] = await Promise.all([
+          getDemographics(),
+          getStability(),
+          getFraudLogs(50),
+        ]);
+        if (!alive) return;
+        setCountries(demo.countries || []);
+        setHealth(stab.health_score);
+        setTimeline(stab.timeline || []);
+        setLogs(fraud.logs || []);
+      } catch (e) {
+        if (alive) setError("Could not reach the backend API.");
+      } finally {
+        if (alive) setLoading(false);
+      }
     }
     load();
-    return () => {
-      alive = false;
-    };
+    return () => { alive = false; };
   }, []);
+
+  if (error) {
+    return (
+      <div className="flex h-64 flex-col items-center justify-center gap-3 text-center">
+        <p className="text-2xl">⚠️</p>
+        <p className="font-semibold text-rose-400">{error}</p>
+        <p className="text-xs text-slate-500">Make sure the Flask backend is running on port 5000.</p>
+      </div>
+    );
+  }
 
   return (
     <div className="space-y-6">
@@ -130,6 +144,12 @@ export default function GeoAndStability() {
         >
           {loading ? (
             <Skeleton className="h-80" />
+          ) : countries.length === 0 ? (
+            <div className="flex h-80 flex-col items-center justify-center gap-2 text-center text-slate-500">
+              <span className="text-4xl">🌍</span>
+              <p className="text-sm font-medium">No geo data yet.</p>
+              <p className="text-xs">Country data appears after users install via referral links.</p>
+            </div>
           ) : (
             <ResponsiveContainer width="100%" height={340}>
               <BarChart
@@ -191,6 +211,12 @@ export default function GeoAndStability() {
       >
         {loading ? (
           <Skeleton className="h-64" />
+        ) : timeline.length === 0 ? (
+          <div className="flex h-64 flex-col items-center justify-center gap-2 text-center text-slate-500">
+            <span className="text-4xl">📉</span>
+            <p className="text-sm font-medium">No error events yet.</p>
+            <p className="text-xs">Errors, timeouts and blocked requests will appear here over time.</p>
+          </div>
         ) : (
           <ResponsiveContainer width="100%" height={280}>
             <AreaChart data={timeline} margin={{ top: 8, right: 8, left: -16, bottom: 0 }}>
@@ -253,6 +279,15 @@ export default function GeoAndStability() {
                       </td>
                     </tr>
                   ))
+                : logs.length === 0 ? (
+                    <tr>
+                      <td colSpan={6} className="py-16 text-center text-slate-500">
+                        <p className="text-3xl">🛡️</p>
+                        <p className="mt-2 text-sm font-medium">No blocked requests yet.</p>
+                        <p className="text-xs">Rate-limit triggers will appear here automatically.</p>
+                      </td>
+                    </tr>
+                  )
                 : logs.map((l) => (
                     <tr key={l.id} className="text-slate-300 transition hover:bg-white/5">
                       <td className="py-3 pr-4 font-mono text-xs text-rose-300">{l.ip_address}</td>
