@@ -4,15 +4,16 @@
  * Interactive live API tester — calls the real Flask SDK endpoints directly
  * from the portal. Shows request inspector + JSON response for each operation.
  */
-import React, { useState } from "react";
+import React, { useEffect, useRef, useState } from "react";
 import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
   Code2,
+  Gift,
   Play,
 } from "lucide-react";
-import { generateReferral, getBalance, trackReferral } from "../api/api";
+import { claimDailyBonus, generateReferral, getBalance, trackReferral } from "../api/api";
 import { Badge, Card } from "./ui";
 
 const PROJECT_ID = import.meta.env.VITE_PROJECT_ID || "proj_demo_local";
@@ -91,6 +92,44 @@ export default function SdkPlayground() {
   const [balLoading, setBalLoading] = useState(false);
   const [balError, setBalError] = useState(null);
 
+  // ── Daily Bonus ───────────────────────────────────────────────────────────
+  const [bonusUserId, setBonusUserId] = useState("user_alice");
+  const [bonusResult, setBonusResult] = useState(null);
+  const [bonusLoading, setBonusLoading] = useState(false);
+  const [bonusError, setBonusError] = useState(null);
+  // retryAfter: seconds remaining until next claim (from last 429 response)
+  const [retryAfter, setRetryAfter] = useState(null);
+  // countdown display (decremented every second while retryAfter > 0)
+  const [countdown, setCountdown] = useState(null);
+  const countdownRef = useRef(null);
+
+  // Start / restart the visible countdown timer whenever retryAfter changes.
+  useEffect(() => {
+    if (retryAfter == null || retryAfter <= 0) {
+      setCountdown(null);
+      return;
+    }
+    setCountdown(retryAfter);
+    clearInterval(countdownRef.current);
+    countdownRef.current = setInterval(() => {
+      setCountdown((prev) => {
+        if (prev <= 1) {
+          clearInterval(countdownRef.current);
+          return 0;
+        }
+        return prev - 1;
+      });
+    }, 1000);
+    return () => clearInterval(countdownRef.current);
+  }, [retryAfter]);
+
+  function formatCountdown(secs) {
+    const h = Math.floor(secs / 3600);
+    const m = Math.floor((secs % 3600) / 60);
+    const s = secs % 60;
+    return [h, m, s].map((v) => String(v).padStart(2, "0")).join(":");
+  }
+
   const handleGenerate = async () => {
     setGenLoading(true);
     setGenError(null);
@@ -135,6 +174,27 @@ export default function SdkPlayground() {
       setBalError(e.response?.data?.error || "Request failed");
     } finally {
       setBalLoading(false);
+    }
+  };
+
+  const handleDailyBonus = async () => {
+    setBonusLoading(true);
+    setBonusError(null);
+    setBonusResult(null);
+    setRetryAfter(null);
+    try {
+      const res = await claimDailyBonus(bonusUserId.trim());
+      setBonusResult(res);
+    } catch (e) {
+      const data = e.response?.data;
+      if (e.response?.status === 429 && data?.retry_after_seconds) {
+        setRetryAfter(data.retry_after_seconds);
+        setBonusError(data.error || "Already claimed today");
+      } else {
+        setBonusError(data?.error || "Request failed");
+      }
+    } finally {
+      setBonusLoading(false);
     }
   };
 
@@ -295,6 +355,78 @@ export default function SdkPlayground() {
               method="GET"
               path={`/referral/balance?user_id=${balUserId}`}
               body={null}
+            />
+          </div>
+        </Card>
+
+        {/* ─── Daily Bonus ─── */}
+        <Card
+          title="④ Daily Login Bonus"
+          action={<Badge tone="green">POST /referral/daily-bonus</Badge>}
+        >
+          <div className="space-y-3">
+            <p className="text-xs text-slate-400">
+              Claim <span className="font-semibold text-emerald-400">+2 points</span> once every 24 hours.
+              The cooldown is enforced server-side — changing the device clock has no effect.
+            </p>
+            <div>
+              <label className="mb-1 block text-xs text-slate-400">
+                User ID
+              </label>
+              <input
+                value={bonusUserId}
+                onChange={(e) => setBonusUserId(e.target.value)}
+                className={inputCls}
+                placeholder="user_alice"
+              />
+            </div>
+            <button
+              onClick={handleDailyBonus}
+              disabled={bonusLoading || !bonusUserId.trim() || countdown > 0}
+              className="inline-flex items-center gap-2 rounded-lg bg-emerald-600 px-4 py-2 text-sm font-semibold text-white transition hover:bg-emerald-500 disabled:opacity-50"
+            >
+              <Gift size={14} />
+              {bonusLoading ? "Claiming…" : "Claim Daily Bonus"}
+            </button>
+
+            {/* Countdown banner — shown while cooldown is active */}
+            {countdown > 0 && (
+              <div className="flex items-center gap-3 rounded-xl border border-amber-500/25 bg-amber-500/10 px-4 py-3">
+                <span className="text-lg">⏳</span>
+                <div>
+                  <p className="text-xs font-semibold text-amber-300">
+                    Already claimed — next bonus available in
+                  </p>
+                  <p className="font-mono text-xl font-bold text-white tracking-widest">
+                    {formatCountdown(countdown)}
+                  </p>
+                </div>
+              </div>
+            )}
+            {countdown === 0 && retryAfter != null && (
+              <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+                <CheckCircle size={13} />
+                Cooldown expired — you can claim again!
+              </div>
+            )}
+
+            {bonusError && countdown == null && (
+              <JsonDisplay data={{ error: bonusError }} isError />
+            )}
+            {bonusResult && (
+              <>
+                <JsonDisplay data={bonusResult} />
+                <div className="flex items-center gap-2 rounded-xl border border-emerald-500/20 bg-emerald-500/10 px-3 py-2 text-xs text-emerald-300">
+                  <CheckCircle size={13} />
+                  +{bonusResult.points_awarded} points credited! New balance:{" "}
+                  <span className="font-bold">{bonusResult.points_balance}</span>
+                </div>
+              </>
+            )}
+            <RequestInspector
+              method="POST"
+              path="/referral/daily-bonus"
+              body={{ user_id: bonusUserId }}
             />
           </div>
         </Card>

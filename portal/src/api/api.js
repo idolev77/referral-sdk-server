@@ -63,4 +63,7 @@ export const getBalance = (user_id) =>
 export const claimReward = (user_id, cost) =>
   client.post("/referral/claim", { user_id, cost }).then((r) => r.data);
 
+export const claimDailyBonus = (user_id) =>
+  client.post("/referral/daily-bonus", { user_id }).then((r) => r.data);
+
 export default client;

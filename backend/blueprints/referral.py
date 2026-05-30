@@ -7,6 +7,7 @@ protected by the Redis anti-fraud rate limiter.
 """
 import json
 import secrets
+from datetime import timedelta
 
 from flask import Blueprint, g, jsonify, request
 
@@ -221,3 +222,82 @@ def claim():
         pass
 
     return jsonify(status="ok", user_id=user_id, points_balance=user.points_balance)
+
+
+_DAILY_BONUS_POINTS = 2
+_DAILY_BONUS_COOLDOWN = timedelta(hours=24)
+
+
+@referral_bp.post("/daily-bonus")
+@require_credentials
+def daily_bonus():
+    """
+    Award 2 points once every 24 hours.
+
+    The cooldown is enforced entirely on the server using the UTC timestamp
+    stored in `users.last_daily_claim_at` — changing the device clock has
+    no effect.
+
+    Returns 200 on success or 429 with `retry_after_seconds` when the
+    cooldown has not yet expired.
+    """
+    from models import _utcnow  # local import to avoid circular refs at module level
+
+    data = request.get_json(silent=True) or {}
+    user_id = data.get("user_id")
+    if not user_id:
+        return jsonify(error="user_id is required"), 400
+
+    project = g.project
+    ip = get_client_ip(request)
+    country = resolve_country(ip)
+
+    user = _get_or_create_user(project, user_id, country)
+
+    now = _utcnow()
+
+    if user.last_daily_claim_at is not None:
+        # Ensure both datetimes are timezone-aware before subtracting.
+        last = user.last_daily_claim_at
+        if last.tzinfo is None:
+            from datetime import timezone
+            last = last.replace(tzinfo=timezone.utc)
+
+        elapsed = now - last
+        if elapsed < _DAILY_BONUS_COOLDOWN:
+            remaining = int((_DAILY_BONUS_COOLDOWN - elapsed).total_seconds())
+            return jsonify(
+                error="Daily bonus already claimed",
+                retry_after_seconds=remaining,
+            ), 429
+
+    # Credit the bonus.
+    user.points_balance += _DAILY_BONUS_POINTS
+    user.last_daily_claim_at = now
+
+    db.session.add(
+        ReferralEvent(
+            project_pk=project.id,
+            event_type=ReferralEvent.EVENT_DAILY_BONUS,
+            user_id=user_id,
+            ip_address=ip,
+            country=country,
+            points_delta=_DAILY_BONUS_POINTS,
+            meta=json.dumps({"bonus_points": _DAILY_BONUS_POINTS}),
+        )
+    )
+    db.session.commit()
+
+    # Invalidate cached balance.
+    try:
+        get_redis().delete(f"balance:{project.project_id}:{user_id}")
+    except Exception:
+        pass
+
+    return jsonify(
+        status="ok",
+        user_id=user_id,
+        points_awarded=_DAILY_BONUS_POINTS,
+        points_balance=user.points_balance,
+        next_claim_at=(now + _DAILY_BONUS_COOLDOWN).isoformat(),
+    )

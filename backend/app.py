@@ -112,6 +112,20 @@ def create_app(config_class: type = Config) -> Flask:
 
     with app.app_context():
         db.create_all()
+        # Idempotent migration: add last_daily_claim_at if the column doesn't
+        # exist yet (handles databases created before this feature was added).
+        try:
+            from sqlalchemy import text
+            db.session.execute(
+                text(
+                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
+                    "last_daily_claim_at TIMESTAMPTZ"
+                )
+            )
+            db.session.commit()
+        except Exception as exc:
+            db.session.rollback()
+            app.logger.warning("Migration for last_daily_claim_at skipped: %s", exc)
         _seed_demo_project(app)
 
     return app

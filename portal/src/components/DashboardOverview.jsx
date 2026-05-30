@@ -36,6 +36,7 @@ const EVENT_TONE = {
   install: "green",
   attributed: "green",
   claim: "amber",
+  daily_bonus: "green",
   blocked: "red",
   error: "red",
 };

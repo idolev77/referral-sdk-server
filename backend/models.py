@@ -89,6 +89,9 @@ class User(db.Model):
     invite_code = db.Column(db.String(32), unique=True, nullable=True, index=True)
     referred_by = db.Column(db.String(128), nullable=True)
 
+    # Daily login bonus — server-enforced 24-hour cooldown
+    last_daily_claim_at = db.Column(db.DateTime(timezone=True), nullable=True)
+
     created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
     updated_at = db.Column(
         db.DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
@@ -115,6 +118,7 @@ class ReferralEvent(db.Model):
     EVENT_INSTALL = "install"
     EVENT_ATTRIBUTED = "attributed"  # successful referral
     EVENT_CLAIM = "claim"
+    EVENT_DAILY_BONUS = "daily_bonus"  # daily login reward
     EVENT_BLOCKED = "blocked"  # anti-fraud rate-limit triggered
     EVENT_ERROR = "error"  # network timeout / server error
 
