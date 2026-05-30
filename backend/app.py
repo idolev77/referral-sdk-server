@@ -112,23 +112,64 @@ def create_app(config_class: type = Config) -> Flask:
 
     with app.app_context():
         db.create_all()
-        # Idempotent migration: add last_daily_claim_at if the column doesn't
-        # exist yet (handles databases created before this feature was added).
-        try:
-            from sqlalchemy import text
-            db.session.execute(
-                text(
-                    "ALTER TABLE users ADD COLUMN IF NOT EXISTS "
-                    "last_daily_claim_at TIMESTAMPTZ"
-                )
-            )
-            db.session.commit()
-        except Exception as exc:
-            db.session.rollback()
-            app.logger.warning("Migration for last_daily_claim_at skipped: %s", exc)
+        _ensure_daily_bonus_column(app)   # dialect-agnostic migration
+        _migrate_demo_country(app, old="Mexico", new="Israel")
         _seed_demo_project(app)
 
     return app
+
+
+def _ensure_daily_bonus_column(app) -> None:
+    """
+    Idempotent, dialect-agnostic migration for users.last_daily_claim_at.
+
+    Uses the SQLAlchemy inspector to check whether the column already exists,
+    and only then issues a plain ALTER TABLE ... ADD COLUMN with a type that
+    is valid on the active dialect. Works on SQLite (local dev), PostgreSQL
+    and MySQL, for both freshly-created and pre-existing databases.
+    """
+    from sqlalchemy import inspect as sa_inspect, text
+
+    try:
+        inspector = sa_inspect(db.engine)
+        columns = {c["name"] for c in inspector.get_columns("users")}
+        if "last_daily_claim_at" in columns:
+            return  # already present
+
+        dialect = db.engine.dialect.name  # 'sqlite' | 'postgresql' | 'mysql'
+        if dialect == "postgresql":
+            col_type = "TIMESTAMPTZ"
+        elif dialect == "mysql":
+            col_type = "DATETIME"
+        else:  # sqlite and everything else
+            col_type = "TIMESTAMP"
+
+        # No "IF NOT EXISTS" — we already checked above, and SQLite/MySQL
+        # don't support that clause for ADD COLUMN.
+        db.session.execute(
+            text(f"ALTER TABLE users ADD COLUMN last_daily_claim_at {col_type}")
+        )
+        db.session.commit()
+        app.logger.info("Added users.last_daily_claim_at (%s).", dialect)
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("daily-bonus column migration skipped: %s", exc)
+
+
+def _migrate_demo_country(app, old: str, new: str) -> None:
+    """Update legacy demo-country placeholder stored in existing user and event rows."""
+    try:
+        updated_users = User.query.filter_by(country=old).update({"country": new})
+        updated_events = ReferralEvent.query.filter_by(country=old).update({"country": new})
+        db.session.commit()
+        if updated_users or updated_events:
+            app.logger.info(
+                "Migrated country %s -> %s: %d user(s), %d event(s)",
+                old, new, updated_users, updated_events,
+            )
+    except Exception as exc:
+        db.session.rollback()
+        app.logger.warning("Demo-country migration skipped: %s", exc)
 
 
 def _seed_demo_project(app) -> None:

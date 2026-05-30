@@ -142,28 +142,28 @@ export default function DashboardOverview() {
               icon={Share2}
               label="Total Referrals"
               value={stats.total_referrals.toLocaleString()}
-              delta={12.4}
+              delta={stats.deltas?.total_referrals ?? null}
               accent="brand"
             />
             <StatCard
               icon={Users}
               label="Total Users"
               value={stats.total_users.toLocaleString()}
-              delta={8.1}
+              delta={stats.deltas?.total_users ?? null}
               accent="sky"
             />
             <StatCard
               icon={GitBranch}
               label="Referred Users"
               value={stats.referred_users.toLocaleString()}
-              delta={5.6}
+              delta={stats.deltas?.referred_users ?? null}
               accent="emerald"
             />
             <StatCard
               icon={TrendingUp}
               label="Viral K-Factor"
               value={stats.k_factor}
-              delta={3.2}
+              delta={stats.deltas?.k_factor ?? null}
               accent="amber"
             />
           </>

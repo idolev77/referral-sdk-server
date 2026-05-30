@@ -17,7 +17,7 @@ _GEO_CACHE_TTL = 60 * 60 * 24  # 24h
 _geoip_reader = None
 _DEMO_COUNTRIES = [
     "United States", "India", "Brazil", "Germany",
-    "United Kingdom", "Nigeria", "Indonesia", "Mexico",
+    "United Kingdom", "Nigeria", "Indonesia", "Israel",
 ]
 
 

@@ -40,12 +40,61 @@ def overview():
     conversion = (attributed / generated) if generated else 0
     k_factor = round(invites_per_user * conversion, 2)
 
+    # --- Week-over-week deltas -------------------------------------------
+    now = datetime.now(timezone.utc)
+    week_ago = now - timedelta(days=7)
+    two_weeks_ago = now - timedelta(days=14)
+
+    def count_event_in(event_type, start, end=None):
+        q = base.filter_by(event_type=event_type).filter(
+            ReferralEvent.created_at >= start
+        )
+        if end is not None:
+            q = q.filter(ReferralEvent.created_at < end)
+        return q.count()
+
+    def count_users_in(start, end=None, referred_only=False):
+        q = User.query.filter(
+            User.project_pk == project.id,
+            User.created_at >= start,
+        )
+        if end is not None:
+            q = q.filter(User.created_at < end)
+        if referred_only:
+            q = q.filter(User.referred_by.isnot(None))
+        return q.count()
+
+    def pct_change(cur, prev):
+        if prev == 0:
+            return None  # not enough history to compute
+        return round((cur - prev) / prev * 100, 1)
+
+    tw_attr = count_event_in(ReferralEvent.EVENT_ATTRIBUTED, week_ago)
+    lw_attr = count_event_in(ReferralEvent.EVENT_ATTRIBUTED, two_weeks_ago, week_ago)
+
+    tw_users = count_users_in(week_ago)
+    lw_users = count_users_in(two_weeks_ago, week_ago)
+
+    tw_referred = count_users_in(week_ago, referred_only=True)
+    lw_referred = count_users_in(two_weeks_ago, week_ago, referred_only=True)
+
+    tw_gen = count_event_in(ReferralEvent.EVENT_GENERATED, week_ago)
+    lw_gen = count_event_in(ReferralEvent.EVENT_GENERATED, two_weeks_ago, week_ago)
+    tw_k = round((tw_gen / tw_users) * (tw_attr / tw_gen), 2) if tw_users and tw_gen else 0
+    lw_k = round((lw_gen / lw_users) * (lw_attr / lw_gen), 2) if lw_users and lw_gen else 0
+
     return jsonify(
         stats={
             "total_referrals": attributed,
             "total_users": total_users,
             "referred_users": referred_users,
             "k_factor": k_factor,
+            "deltas": {
+                "total_referrals": pct_change(tw_attr, lw_attr),
+                "total_users": pct_change(tw_users, lw_users),
+                "referred_users": pct_change(tw_referred, lw_referred),
+                "k_factor": pct_change(tw_k, lw_k),
+            },
         },
         funnel=[
             {"stage": "Links Generated", "value": generated},
