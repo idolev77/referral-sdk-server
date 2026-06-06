@@ -208,6 +208,7 @@ The portal is a **React + Vite + Tailwind CSS** single-page application with six
 - **Total Users** — all registered users in the project
 - **Referred Users** — users with a non-null `referred_by` field
 - **Viral K-Factor** — `(invites_generated / total_users) × (attributed / generated)`
+- **Week-over-week deltas** — each KPI card shows a `±%` badge comparing the current 7 days against the prior 7 days (returned as `stats.deltas` in the API response)
 - **Conversion Funnel bar chart** — four stages with end-to-end conversion % badge
 - **Activity feed** — event type, user ID, country, timestamp, color-coded badge
 - **Leaderboard** — rank, user ID, invite code, total points, referral count, country
@@ -490,8 +491,9 @@ Missing or invalid credentials return `401` or `403` respectively.
 | `event_type` | When it's written | `points_delta` |
 |---|---|---|
 | `generated` | User calls `/generate` | 0 |
-| `click` | Landing page `/i/<code>` is visited | 0 |
-| `install` | Attributed referral credited (written alongside `attributed`) | `+points_per_referral` |
+| `click` | Landing page `/i/<code>` is visited **or** `/track` called with `stage=click` | 0 |
+| `install` | `/track` called with `stage=install` directly | 0 |
+| `install` *(internal)* | Written automatically alongside an `attributed` event when attribution succeeds; this is the row that carries the actual point credit to the inviter | `+points_per_referral` |
 | `attributed` | `/track` called with `stage=attributed` | 0 |
 | `claim` | User redeems points via `/claim` | `−cost` |
 | `daily_bonus` | `/daily-bonus` succeeds | `+2` |

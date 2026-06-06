@@ -50,6 +50,16 @@ export const getLeaderboard = (limit = 10) =>
 export const getConfigAudit = (limit = 30) =>
   client.get("/admin/config-audit", { params: { limit } }).then((r) => r.data);
 
+/* -------------------------- Growth Insights --------------------------- */
+export const getEconomy = () =>
+  client.get("/admin/economy").then((r) => r.data);
+
+export const getReferralTree = () =>
+  client.get("/admin/referral-tree").then((r) => r.data);
+
+export const getConversion = () =>
+  client.get("/admin/conversion").then((r) => r.data);
+
 /* --------------------------- SDK endpoints ---------------------------- */
 export const generateReferral = (user_id) =>
   client.post("/referral/generate", { user_id }).then((r) => r.data);

@@ -43,3 +43,9 @@ class Config:
 
     # --- Referral economy defaults -----------------------------------------
     DEFAULT_POINTS_PER_REFERRAL = int(os.getenv("DEFAULT_POINTS_PER_REFERRAL", "100"))
+
+    # --- Local-dev geo -----------------------------------------------------
+    # Country attributed to private / LAN traffic (e.g. a phone on the same Wi-Fi),
+    # which has no geo-locatable public IP. Empty -> auto-detect the server's own
+    # public-IP country (falls back to "Israel").
+    LOCAL_DEV_COUNTRY = os.getenv("LOCAL_DEV_COUNTRY", "")

@@ -139,6 +139,14 @@ def track():
 
     db.session.commit()
 
+    # Invalidate the inviter's cached balance so the next /balance call
+    # returns the fresh DB value and not a stale Redis entry.
+    if points_awarded > 0:
+        try:
+            get_redis().delete(f"balance:{project.project_id}:{inviter.user_id}")
+        except Exception:
+            pass
+
     return jsonify(
         status="ok",
         stage=stage,

@@ -12,9 +12,11 @@ import {
   Sun,
   TrendingUp,
   BookOpen,
+  Sparkles,
 } from "lucide-react";
 
 import DashboardOverview from "./components/DashboardOverview.jsx";
+import GrowthInsights from "./components/GrowthInsights.jsx";
 import GeoAndStability from "./components/GeoAndStability.jsx";
 import CampaignSettings from "./components/CampaignSettings.jsx";
 import GrowthSimulator from "./components/GrowthSimulator.jsx";
@@ -23,6 +25,7 @@ import IntegrationGuide from "./components/IntegrationGuide.jsx";
 
 const NAV = [
   { id: "overview", label: "Overview", icon: LayoutDashboard, Component: DashboardOverview },
+  { id: "insights", label: "Growth Insights", icon: Sparkles, Component: GrowthInsights },
   { id: "geo", label: "Demographics & Stability", icon: Globe2, Component: GeoAndStability },
   { id: "rules", label: "Campaign Manager", icon: SlidersHorizontal, Component: CampaignSettings },
   { id: "simulator", label: "Growth Simulator", icon: TrendingUp, Component: GrowthSimulator },
