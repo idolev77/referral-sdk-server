@@ -41,7 +41,9 @@ function ChartTooltip({ active, payload, label }) {
 }
 
 function HealthGauge({ score }) {
-  const radius = 56;
+  const size   = 200;
+  const stroke = 14;
+  const radius = size / 2 - stroke;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - score / 100);
   const tone   = score >= 98 ? "#34d399" : score >= 93 ? "#f59e0b" : "#f43f5e";
@@ -49,25 +51,27 @@ function HealthGauge({ score }) {
                : score >= 93 ? { label: "Good",      badge: "amber" }
                :               { label: "Degraded",  badge: "red"   };
   return (
-    <div className="flex flex-col items-center justify-center">
-      <svg width="160" height="160" className="-rotate-90">
-        <circle cx="80" cy="80" r={radius} stroke="#ffffff12" strokeWidth="12" fill="none" />
-        <circle
-          cx="80"
-          cy="80"
-          r={radius}
-          stroke={tone}
-          strokeWidth="12"
-          fill="none"
-          strokeLinecap="round"
-          strokeDasharray={circumference}
-          strokeDashoffset={offset}
-          style={{ transition: "stroke-dashoffset 1s ease-out" }}
-        />
-      </svg>
-      <div className="-mt-[104px] text-center">
-        <div className="text-3xl font-extrabold text-white">{score}%</div>
-        <div className="text-xs uppercase tracking-wide text-slate-500">Stability</div>
+    <div className="flex flex-col items-center justify-center gap-3">
+      <div className="relative" style={{ width: size, height: size }}>
+        <svg width={size} height={size} className="-rotate-90">
+          <circle cx={size / 2} cy={size / 2} r={radius} stroke="#ffffff12" strokeWidth={stroke} fill="none" />
+          <circle
+            cx={size / 2}
+            cy={size / 2}
+            r={radius}
+            stroke={tone}
+            strokeWidth={stroke}
+            fill="none"
+            strokeLinecap="round"
+            strokeDasharray={circumference}
+            strokeDashoffset={offset}
+            style={{ transition: "stroke-dashoffset 1s ease-out" }}
+          />
+        </svg>
+        <div className="absolute inset-0 flex flex-col items-center justify-center text-center leading-none">
+          <div className="text-4xl font-extrabold tabular-nums text-white">{score.toFixed(1)}%</div>
+          <div className="mt-1.5 text-xs uppercase tracking-wide text-slate-500">Stability</div>
+        </div>
       </div>
       <Badge tone={status.badge}>{status.label}</Badge>
     </div>
