@@ -18,6 +18,7 @@ from flask_cors import CORS
 
 from blueprints.admin import admin_bp
 from blueprints.referral import referral_bp
+from cache import invalidate_project_cache
 from config import Config
 from extensions import get_redis, init_redis
 from geoip_service import get_client_ip, init_geoip, resolve_country
@@ -122,6 +123,9 @@ def create_app(config_class: type = Config) -> Flask:
                 )
             )
             db.session.commit()
+            # Click event changes the conversion funnel — refresh admin caches.
+            if inviter.project is not None:
+                invalidate_project_cache(inviter.project.project_id)
 
         open_url = f"/i/{code}/open"
         return render_template_string(_INVITE_PAGE, code=code, open_url=open_url)
@@ -162,6 +166,8 @@ def create_app(config_class: type = Config) -> Flask:
                     get_redis().delete(f"balance:{project.project_id}:{inviter.user_id}")
                 except Exception:
                     pass
+                # Attribution + points award invalidates every dashboard aggregate.
+                invalidate_project_cache(project.project_id)
             app.logger.info(
                 "Web-open award: code=%s inviter=%s +%d -> %d",
                 code, inviter.user_id, points, inviter.points_balance,

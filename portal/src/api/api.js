@@ -60,6 +60,11 @@ export const getReferralTree = () =>
 export const getConversion = () =>
   client.get("/admin/conversion").then((r) => r.data);
 
+export const getSignups = (granularity = "day", days) =>
+  client
+    .get("/admin/signups", { params: { granularity, ...(days ? { days } : {}) } })
+    .then((r) => r.data);
+
 /* --------------------------- SDK endpoints ---------------------------- */
 export const generateReferral = (user_id) =>
   client.post("/referral/generate", { user_id }).then((r) => r.data);

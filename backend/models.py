@@ -92,7 +92,7 @@ class User(db.Model):
     # Daily login bonus — server-enforced 24-hour cooldown
     last_daily_claim_at = db.Column(db.DateTime(timezone=True), nullable=True)
 
-    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow)
+    created_at = db.Column(db.DateTime(timezone=True), default=_utcnow, index=True)
     updated_at = db.Column(
         db.DateTime(timezone=True), default=_utcnow, onupdate=_utcnow
     )

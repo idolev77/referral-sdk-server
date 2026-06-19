@@ -32,10 +32,12 @@ import {
   Timer,
   Share2,
   Trophy,
+  UserPlus,
 } from "lucide-react";
 
 import { getConversion, getEconomy, getReferralTree } from "../api/api";
 import { Badge, Card, CHART_COLORS, Skeleton, StatCard } from "./ui";
+import SignupsChart from "./SignupsChart.jsx";
 
 /* ------------------------------- helpers ------------------------------- */
 function ChartTooltip({ active, payload, label }) {
@@ -133,6 +135,14 @@ export default function GrowthInsights() {
           live event stream.
         </p>
       </div>
+
+      {/* ============================ 0. SIGN-UPS =========================== */}
+      <SectionHeader
+        icon={UserPlus}
+        title="New Members"
+        subtitle="How many people join over time — switch between daily and hourly view."
+      />
+      <SignupsChart />
 
       {/* ============================ 1. ECONOMY ============================ */}
       <SectionHeader

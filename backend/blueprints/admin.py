@@ -7,8 +7,9 @@ remote-config update used by the Campaign Manager ("Save & Sync").
 from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, g, jsonify, request
-from sqlalchemy import func
+from sqlalchemy import case, func
 
+from cache import cached_admin_view
 from models import ConfigChange, Project, ReferralEvent, User, db
 from security import require_credentials
 
@@ -17,6 +18,7 @@ admin_bp = Blueprint("admin", __name__, url_prefix="/api/admin")
 
 @admin_bp.get("/overview")
 @require_credentials
+@cached_admin_view("overview")
 def overview():
     """Top stat cards + conversion funnel for the project."""
     project = g.project
@@ -122,6 +124,7 @@ def activity():
 
 @admin_bp.get("/demographics")
 @require_credentials
+@cached_admin_view("demographics")
 def demographics():
     """Country breakdown derived from Geo-IP data."""
     project = g.project
@@ -137,38 +140,125 @@ def demographics():
     )
 
 
+@admin_bp.get("/signups")
+@require_credentials
+@cached_admin_view("signups")
+def signups():
+    """
+    New members (people joining) over time, bucketed by day or hour.
+
+    Fully aggregated in SQL (one row per bucket) so the payload size and work
+    scale with the number of *buckets*, not the number of users — and the result
+    is cached behind the versioned admin cache.
+
+    Query args:
+        granularity = "day" (default) | "hour"
+        days        = look-back window (default 30 for day, 2 for hour)
+    """
+    project = g.project
+    granularity = request.args.get("granularity", "day")
+    if granularity not in ("day", "hour"):
+        granularity = "day"
+
+    default_days = 2 if granularity == "hour" else 30
+    max_days = 14 if granularity == "hour" else 365
+    try:
+        days = min(max(int(request.args.get("days", default_days)), 1), max_days)
+    except (TypeError, ValueError):
+        days = default_days
+
+    since = datetime.now(timezone.utc) - timedelta(days=days)
+
+    # Dialect-aware time-bucket expression (PostgreSQL in prod, SQLite in dev).
+    dialect = db.engine.dialect.name
+    if dialect == "postgresql":
+        bucket = func.date_trunc(granularity, User.created_at)
+    else:  # sqlite / others
+        fmt = "%Y-%m-%d %H:00" if granularity == "hour" else "%Y-%m-%d"
+        bucket = func.strftime(fmt, User.created_at)
+
+    rows = (
+        db.session.query(bucket.label("bucket"), func.count(User.id))
+        .filter(User.project_pk == project.id, User.created_at >= since)
+        .group_by("bucket")
+        .order_by("bucket")
+        .all()
+    )
+
+    series = [
+        {
+            "ts": b.isoformat() if hasattr(b, "isoformat") else str(b),
+            "count": int(n),
+        }
+        for b, n in rows
+    ]
+
+    return jsonify(
+        granularity=granularity,
+        days=days,
+        total=sum(p["count"] for p in series),
+        series=series,
+    )
+
+
 @admin_bp.get("/economy")
 @require_credentials
+@cached_admin_view("economy")
 def economy():
     """Points economy: issued vs redeemed, outstanding liability, sources, 30-day flow."""
     project = g.project
     now = datetime.now(timezone.utc)
     since = now - timedelta(days=30)
 
+    # Positive deltas are points issued; negative deltas are points redeemed.
+    issued_expr = func.coalesce(
+        func.sum(case((ReferralEvent.points_delta > 0, ReferralEvent.points_delta), else_=0)),
+        0,
+    )
+    redeemed_expr = func.coalesce(
+        func.sum(case((ReferralEvent.points_delta < 0, -ReferralEvent.points_delta), else_=0)),
+        0,
+    )
+
+    # Totals + per-event-type breakdown in a single grouped query (one row per
+    # event type, not one row per event).
     issued = redeemed = 0
     sources = {"Referral Rewards": 0, "Daily Bonus": 0, "Other": 0}
-    timeline: dict[str, dict] = {}
+    type_rows = (
+        db.session.query(ReferralEvent.event_type, issued_expr, redeemed_expr)
+        .filter(ReferralEvent.project_pk == project.id)
+        .group_by(ReferralEvent.event_type)
+        .all()
+    )
+    for event_type, iss, red in type_rows:
+        iss, red = int(iss or 0), int(red or 0)
+        issued += iss
+        redeemed += red
+        if event_type in (ReferralEvent.EVENT_INSTALL, ReferralEvent.EVENT_ATTRIBUTED):
+            sources["Referral Rewards"] += iss
+        elif event_type == ReferralEvent.EVENT_DAILY_BONUS:
+            sources["Daily Bonus"] += iss
+        else:
+            sources["Other"] += iss
 
-    for e in ReferralEvent.query.filter_by(project_pk=project.id).all():
-        d = e.points_delta or 0
-        if d > 0:
-            issued += d
-            if e.event_type in (ReferralEvent.EVENT_INSTALL, ReferralEvent.EVENT_ATTRIBUTED):
-                sources["Referral Rewards"] += d
-            elif e.event_type == ReferralEvent.EVENT_DAILY_BONUS:
-                sources["Daily Bonus"] += d
-            else:
-                sources["Other"] += d
-        elif d < 0:
-            redeemed += -d
-
-        if e.created_at and e.created_at >= since:
-            key = e.created_at.date().isoformat()
-            bucket = timeline.setdefault(key, {"date": key, "issued": 0, "redeemed": 0})
-            if d > 0:
-                bucket["issued"] += d
-            elif d < 0:
-                bucket["redeemed"] += -d
+    # 30-day issued/redeemed flow, aggregated by day in SQL.
+    timeline_rows = (
+        db.session.query(
+            func.date(ReferralEvent.created_at).label("day"),
+            issued_expr,
+            redeemed_expr,
+        )
+        .filter(
+            ReferralEvent.project_pk == project.id,
+            ReferralEvent.created_at >= since,
+        )
+        .group_by("day")
+        .all()
+    )
+    timeline = [
+        {"date": str(day), "issued": int(iss or 0), "redeemed": int(red or 0)}
+        for day, iss, red in timeline_rows
+    ]
 
     outstanding = (
         db.session.query(func.coalesce(func.sum(User.points_balance), 0))
@@ -182,12 +272,13 @@ def economy():
         outstanding=int(outstanding),
         redemption_rate=round(redeemed / issued * 100, 1) if issued else 0.0,
         sources=[{"source": k, "points": v} for k, v in sources.items() if v > 0],
-        timeline=sorted(timeline.values(), key=lambda x: x["date"]),
+        timeline=sorted(timeline, key=lambda x: x["date"]),
     )
 
 
 @admin_bp.get("/referral-tree")
 @require_credentials
+@cached_admin_view("referral-tree")
 def referral_tree():
     """Viral tree derived from User.referred_by: generations, depth, downstream reach."""
     project = g.project
@@ -271,6 +362,7 @@ def referral_tree():
 
 @admin_bp.get("/conversion")
 @require_credentials
+@cached_admin_view("conversion")
 def conversion():
     """Funnel conversion rates + click→attributed latency + per-country conversion."""
     project = g.project
@@ -283,25 +375,30 @@ def conversion():
     def rate(num, den):
         return round(num / den * 100, 1) if den else 0.0
 
-    click_events = base.filter(
-        ReferralEvent.event_type == ReferralEvent.EVENT_CLICK,
-        ReferralEvent.invite_code.isnot(None),
-    ).all()
-    attr_events = base.filter(
-        ReferralEvent.event_type == ReferralEvent.EVENT_ATTRIBUTED,
-        ReferralEvent.invite_code.isnot(None),
-    ).all()
-
-    first_click: dict[str, object] = {}
-    for e in click_events:
-        c = e.invite_code
-        if e.created_at and (c not in first_click or e.created_at < first_click[c]):
-            first_click[c] = e.created_at
-    first_attr: dict[str, object] = {}
-    for e in attr_events:
-        c = e.invite_code
-        if e.created_at and (c not in first_attr or e.created_at < first_attr[c]):
-            first_attr[c] = e.created_at
+    # First click / first attribution per invite code, computed in SQL so we
+    # transfer one row per code instead of every click/attribution event.
+    first_click = dict(
+        base.with_entities(
+            ReferralEvent.invite_code, func.min(ReferralEvent.created_at)
+        )
+        .filter(
+            ReferralEvent.event_type == ReferralEvent.EVENT_CLICK,
+            ReferralEvent.invite_code.isnot(None),
+        )
+        .group_by(ReferralEvent.invite_code)
+        .all()
+    )
+    first_attr = dict(
+        base.with_entities(
+            ReferralEvent.invite_code, func.min(ReferralEvent.created_at)
+        )
+        .filter(
+            ReferralEvent.event_type == ReferralEvent.EVENT_ATTRIBUTED,
+            ReferralEvent.invite_code.isnot(None),
+        )
+        .group_by(ReferralEvent.invite_code)
+        .all()
+    )
 
     deltas = []
     for c, t_attr in first_attr.items():
@@ -322,14 +419,21 @@ def conversion():
         for label, lo, hi in bucket_defs
     ]
 
-    country_clicks: dict[str, int] = {}
-    country_attr: dict[str, int] = {}
-    for e in click_events:
-        k = e.country or "Unknown"
-        country_clicks[k] = country_clicks.get(k, 0) + 1
-    for e in attr_events:
-        k = e.country or "Unknown"
-        country_attr[k] = country_attr.get(k, 0) + 1
+    def country_counts(event_type):
+        country_label = func.coalesce(ReferralEvent.country, "Unknown")
+        rows = (
+            base.with_entities(country_label, func.count(ReferralEvent.id))
+            .filter(
+                ReferralEvent.event_type == event_type,
+                ReferralEvent.invite_code.isnot(None),
+            )
+            .group_by(country_label)
+            .all()
+        )
+        return {country: n for country, n in rows}
+
+    country_clicks = country_counts(ReferralEvent.EVENT_CLICK)
+    country_attr = country_counts(ReferralEvent.EVENT_ATTRIBUTED)
 
     by_country = []
     for country in set(list(country_clicks) + list(country_attr)):
@@ -362,6 +466,7 @@ def conversion():
 
 @admin_bp.get("/stability")
 @require_credentials
+@cached_admin_view("stability")
 def stability():
     """SDK health score + error/blocked timeline (last 14 days)."""
     project = g.project
@@ -422,6 +527,7 @@ def fraud_logs():
 
 @admin_bp.get("/leaderboard")
 @require_credentials
+@cached_admin_view("leaderboard")
 def leaderboard():
     """Top referrers ranked by successful attributions."""
     project = g.project

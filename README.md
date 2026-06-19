@@ -8,6 +8,11 @@ server_SDK/
 └── portal/      Developer portal (React · Vite · Tailwind · Recharts)
 ```
 
+> **📱 Companion Android SDK** — the client-side Kotlin SDK and its showcase demo app
+> (*Portfolio Pulse*) live in a separate repository:
+> **[github.com/idolev77/ReferralVirality](https://github.com/idolev77/ReferralVirality)**.
+> This backend is the server the Android SDK talks to.
+
 ---
 
 ## Features
@@ -64,8 +69,7 @@ npm install
 npm run dev                      # http://localhost:5173
 ```
 
-Vite proxies `/api` → Flask automatically.  
-Set `VITE_USE_MOCK=true` in `portal/.env` to run the portal on the built-in high-fidelity mock dataset (no backend required).
+Vite proxies `/api` → Flask automatically, so the portal talks to the live backend out of the box.
 
 ---
 
@@ -124,13 +128,19 @@ curl -X POST http://localhost:5000/api/referral/track \
 
 | Method | Path | Description |
 |--------|------|-------------|
-| `GET` | `/api/admin/overview` | KPI cards, top referrers, funnel counts |
+| `GET` | `/api/admin/overview` | KPI cards with period-over-period deltas, funnel counts |
 | `GET` | `/api/admin/activity` | Time-series event stream |
+| `GET` | `/api/admin/signups` | New-user signups over time (organic vs. referred) |
 | `GET` | `/api/admin/demographics` | Country breakdown |
+| `GET` | `/api/admin/economy` | Points economy — issued vs. redeemed ledger |
+| `GET` | `/api/admin/conversion` | Funnel conversion rates between stages |
+| `GET` | `/api/admin/referral-tree` | Multi-level referral graph (depth + downstream) |
+| `GET` | `/api/admin/leaderboard` | Top referrers ranked by attributed installs |
 | `GET` | `/api/admin/stability` | SDK health score + error timeline |
 | `GET` | `/api/admin/fraud-logs` | Blocked / suspicious event log |
 | `GET` | `/api/admin/config` | Current project configuration |
 | `PUT` | `/api/admin/config` | Update project configuration live |
+| `GET` | `/api/admin/config-audit` | Change history for configuration edits |
 
 ---
 
@@ -156,9 +166,10 @@ Start the portal (`npm run dev`) and open **http://localhost:5173**.
 
 | Screen | What it shows |
 |--------|---------------|
-| **Dashboard** | KPI cards, conversion funnel, top-referrer leaderboard |
-| **Geo & Stability** | Country breakdown chart, SDK health gauge, error/blocked timeline |
-| **Campaign Settings** | Live remote-config editor — edit reward rules and hit Save & Sync |
+| **Overview** | KPI cards with deltas, conversion funnel, top-referrer leaderboard |
+| **Growth Insights** | Signups over time (organic vs. referred), points economy, referral tree |
+| **Demographics & Stability** | Country breakdown chart, SDK health gauge, error/blocked timeline |
+| **Campaign Manager** | Live remote-config editor — edit reward rules and hit Save & Sync |
 | **Growth Simulator** | K-factor viral model — tweak inputs and project growth curves |
 | **SDK Playground** | Live API tester that hits the real backend |
 | **Integration Guide** | Copyable code samples (Python + JavaScript) |
@@ -175,6 +186,7 @@ backend/
 ├── extensions.py       Shared Flask extensions (db, CORS)
 ├── security.py         API key auth + rate-limiter middleware
 ├── geoip_service.py    MaxMind + HTTP fallback Geo-IP resolver
+├── cache.py            Redis-backed caching + GeoIP cache helpers
 ├── requirements.txt
 ├── Dockerfile
 └── blueprints/
@@ -186,14 +198,17 @@ portal/
 ├── tailwind.config.js
 └── src/
     ├── App.jsx
-    ├── api/api.js      Centralised HTTP client (real + mock)
+    ├── api/api.js      Centralised HTTP client
     └── components/
         ├── DashboardOverview.jsx
+        ├── GrowthInsights.jsx
+        ├── SignupsChart.jsx
         ├── GeoAndStability.jsx
         ├── CampaignSettings.jsx
         ├── GrowthSimulator.jsx
         ├── SdkPlayground.jsx
-        └── IntegrationGuide.jsx
+        ├── IntegrationGuide.jsx
+        └── ui.jsx
 ```
 
 ---

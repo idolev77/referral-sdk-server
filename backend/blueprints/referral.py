@@ -11,6 +11,7 @@ from datetime import timedelta
 
 from flask import Blueprint, g, jsonify, request
 
+from cache import invalidate_project_cache
 from extensions import get_redis
 from geoip_service import get_client_ip, resolve_country
 from models import ReferralEvent, User, db
@@ -66,6 +67,9 @@ def generate():
         )
     )
     db.session.commit()
+
+    # New `generated` event shifts the funnel / K-factor — refresh admin caches.
+    invalidate_project_cache(project.project_id)
 
     base = request.host_url.rstrip("/")
     return jsonify(
@@ -138,6 +142,10 @@ def track():
             )
 
     db.session.commit()
+
+    # A new funnel event (click/install/attributed) changes every dashboard
+    # aggregate — invalidate the project's admin caches.
+    invalidate_project_cache(project.project_id)
 
     # Invalidate the inviter's cached balance so the next /balance call
     # returns the fresh DB value and not a stale Redis entry.
@@ -223,11 +231,12 @@ def claim():
     )
     db.session.commit()
 
-    # Invalidate cached balance.
+    # Invalidate cached balance + admin economy aggregates (points redeemed).
     try:
         get_redis().delete(f"balance:{project.project_id}:{user_id}")
     except Exception:
         pass
+    invalidate_project_cache(project.project_id)
 
     return jsonify(status="ok", user_id=user_id, points_balance=user.points_balance)
 
@@ -296,11 +305,12 @@ def daily_bonus():
     )
     db.session.commit()
 
-    # Invalidate cached balance.
+    # Invalidate cached balance + admin economy/activity aggregates.
     try:
         get_redis().delete(f"balance:{project.project_id}:{user_id}")
     except Exception:
         pass
+    invalidate_project_cache(project.project_id)
 
     return jsonify(
         status="ok",
