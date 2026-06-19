@@ -35,7 +35,7 @@ export function StatCard({ icon: Icon, label, value, delta, accent = "brand" }) 
           </span>
         )}
       </div>
-      <div className="mt-3 text-3xl font-extrabold tracking-tight text-white dark:text-white">
+      <div className="mt-3 text-3xl font-extrabold tracking-tight text-white">
         {value}
       </div>
       {delta != null && (

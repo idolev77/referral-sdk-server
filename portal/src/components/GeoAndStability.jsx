@@ -44,7 +44,10 @@ function HealthGauge({ score }) {
   const radius = 56;
   const circumference = 2 * Math.PI * radius;
   const offset = circumference * (1 - score / 100);
-  const tone = score >= 99 ? "#34d399" : score >= 95 ? "#f59e0b" : "#f43f5e";
+  const tone   = score >= 98 ? "#34d399" : score >= 93 ? "#f59e0b" : "#f43f5e";
+  const status = score >= 98 ? { label: "Healthy",  badge: "green" }
+               : score >= 93 ? { label: "Good",      badge: "amber" }
+               :               { label: "Degraded",  badge: "red"   };
   return (
     <div className="flex flex-col items-center justify-center">
       <svg width="160" height="160" className="-rotate-90">
@@ -66,9 +69,7 @@ function HealthGauge({ score }) {
         <div className="text-3xl font-extrabold text-white">{score}%</div>
         <div className="text-xs uppercase tracking-wide text-slate-500">Stability</div>
       </div>
-      <Badge tone={score >= 99 ? "green" : "amber"} >
-        {score >= 99 ? "Healthy" : "Degraded"}
-      </Badge>
+      <Badge tone={status.badge}>{status.label}</Badge>
     </div>
   );
 }

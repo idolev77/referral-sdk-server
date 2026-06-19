@@ -1,15 +1,13 @@
 /**
  * App shell — sleek sidebar, theme toggle and routed content area.
  */
-import React, { useState } from "react";
+import React, { useEffect, useState } from "react";
 import {
   FlaskConical,
   Globe2,
   LayoutDashboard,
-  Moon,
   Rocket,
   SlidersHorizontal,
-  Sun,
   TrendingUp,
   BookOpen,
   Sparkles,
@@ -35,15 +33,10 @@ const NAV = [
 
 export default function App() {
   const [active, setActive] = useState("overview");
-  const [dark, setDark] = useState(true);
 
-  const toggleTheme = () => {
-    setDark((d) => {
-      const next = !d;
-      document.documentElement.classList.toggle("dark", next);
-      return next;
-    });
-  };
+  useEffect(() => {
+    document.documentElement.classList.add("dark");
+  }, []);
 
   const Active = NAV.find((n) => n.id === active)?.Component ?? DashboardOverview;
 
@@ -108,13 +101,6 @@ export default function App() {
             <span className="hidden items-center gap-2 rounded-full bg-emerald-500/10 px-3 py-1 text-xs text-emerald-400 sm:flex">
               <span className="h-2 w-2 rounded-full bg-emerald-500" /> API Connected
             </span>
-            <button
-              onClick={toggleTheme}
-              className="rounded-lg border border-white/10 p-2 text-slate-300 transition hover:bg-white/5"
-              aria-label="Toggle theme"
-            >
-              {dark ? <Sun size={18} /> : <Moon size={18} />}
-            </button>
           </div>
         </header>
 
