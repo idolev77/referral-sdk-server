@@ -1,0 +1,848 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Gamified Referral & Virality SDK — Android</title>
+
+  <link rel="preconnect" href="https://fonts.googleapis.com" />
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+  <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800;900&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet" />
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/themes/prism-tomorrow.min.css" />
+
+  <style>
+    *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    :root {
+      --bg:          #0b0e1a;
+      --surface:     #141a2e;
+      --surface-2:   #1c2440;
+      --border:      rgba(255,255,255,0.06);
+      --border-2:    rgba(255,255,255,0.10);
+      --brand:       #6366f1;
+      --brand-light: #818cf8;
+      --brand-dim:   rgba(99,102,241,0.12);
+      --sky:         #22d3ee;
+      --emerald:     #34d399;
+      --amber:       #f59e0b;
+      --rose:        #f43f5e;
+      --text:        #f1f5f9;
+      --text-muted:  #94a3b8;
+      --text-dim:    #475569;
+      --r:           14px;
+      --r-lg:        20px;
+    }
+
+    html { scroll-behavior: smooth; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', system-ui, sans-serif;
+      line-height: 1.65;
+      -webkit-font-smoothing: antialiased;
+    }
+
+    a { color: var(--brand-light); text-decoration: none; }
+    a:hover { text-decoration: underline; }
+
+    code:not([class]) {
+      background: var(--surface-2);
+      border: 1px solid var(--border-2);
+      border-radius: 5px;
+      padding: 1px 7px;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.83em;
+      color: var(--brand-light);
+    }
+
+    /* ── NAV ──────────────────────────────────────── */
+    nav {
+      position: sticky; top: 0; z-index: 100;
+      background: rgba(11,14,26,0.85);
+      backdrop-filter: blur(24px);
+      -webkit-backdrop-filter: blur(24px);
+      border-bottom: 1px solid var(--border);
+      height: 60px;
+      display: flex; align-items: center; justify-content: space-between;
+      padding: 0 48px;
+    }
+
+    .nav-brand {
+      display: flex; align-items: center; gap: 10px;
+      font-weight: 700; font-size: 15px; color: var(--text);
+      text-decoration: none;
+    }
+    .nav-brand:hover { text-decoration: none; }
+
+    .nav-brand-icon {
+      width: 30px; height: 30px;
+      background: var(--brand);
+      border-radius: 8px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 11px; font-weight: 700; color: #fff; letter-spacing: -0.5px;
+    }
+
+    .nav-links {
+      display: flex; align-items: center; gap: 28px; list-style: none;
+    }
+    .nav-links a {
+      font-size: 13px; color: var(--text-muted);
+      transition: color 0.15s;
+    }
+    .nav-links a:hover { color: var(--text); text-decoration: none; }
+
+    .btn { display: inline-flex; align-items: center; gap: 7px; font-weight: 600; border-radius: 10px; cursor: pointer; transition: opacity 0.15s, transform 0.15s; text-decoration: none; border: none; }
+    .btn:hover { opacity: 0.88; transform: translateY(-1px); text-decoration: none; }
+    .btn:active { transform: translateY(0); }
+
+    .btn-primary { background: var(--brand); color: #fff; padding: 11px 24px; font-size: 14px; }
+    .btn-primary:hover { color: #fff; }
+    .btn-outline  { background: transparent; color: var(--text); padding: 10px 22px; font-size: 14px; border: 1px solid var(--border-2); }
+    .btn-outline:hover { background: var(--surface); color: var(--text); border-color: var(--brand-light); }
+
+    .btn-sm { padding: 8px 18px; font-size: 13px; border-radius: 8px; }
+
+    /* ── LAYOUT ───────────────────────────────────── */
+    .container { max-width: 1120px; margin: 0 auto; padding: 0 48px; }
+    .section-label {
+      font-size: 12px; font-weight: 600; letter-spacing: 0.09em;
+      text-transform: uppercase; color: var(--brand-light); margin-bottom: 14px;
+    }
+    h1 { font-size: 56px; font-weight: 900; line-height: 1.05; letter-spacing: -0.03em; }
+    h2 { font-size: 38px; font-weight: 800; line-height: 1.15; letter-spacing: -0.02em; }
+    h3 { font-size: 20px; font-weight: 700; }
+
+    .card {
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: var(--r);
+    }
+
+    /* ── HERO ─────────────────────────────────────── */
+    #hero { padding: 96px 0 72px; text-align: center; }
+
+    .badge-row {
+      display: flex; justify-content: center; flex-wrap: wrap; gap: 8px; margin-bottom: 32px;
+    }
+    .badge {
+      display: inline-flex; align-items: center; gap: 7px;
+      padding: 5px 13px; border-radius: 20px; font-size: 12px; font-weight: 500;
+      background: var(--surface); border: 1px solid var(--border-2); color: var(--text-muted);
+    }
+    .badge-dot { width: 6px; height: 6px; border-radius: 50%; flex-shrink: 0; }
+
+    .hero-headline { margin: 0 auto 22px; max-width: 820px; }
+    .hero-headline em { font-style: normal; color: var(--brand-light); }
+
+    .hero-sub {
+      font-size: 18px; color: var(--text-muted); max-width: 560px;
+      margin: 0 auto 40px; line-height: 1.7;
+    }
+
+    .hero-ctas { display: flex; justify-content: center; gap: 12px; margin-bottom: 64px; }
+
+    /* Video / poster */
+    .media-frame {
+      border-radius: var(--r-lg);
+      border: 1px solid var(--border-2);
+      overflow: hidden;
+      background: var(--surface);
+      max-width: 920px;
+      margin: 0 auto;
+      position: relative;
+    }
+    .media-frame video,
+    .media-frame img { width: 100%; display: block; }
+
+    .media-label {
+      position: absolute; bottom: 16px; left: 16px;
+      background: rgba(11,14,26,0.8);
+      border: 1px solid var(--border-2);
+      backdrop-filter: blur(12px);
+      border-radius: 8px;
+      padding: 6px 12px;
+      font-size: 12px; color: var(--text-muted);
+      display: flex; align-items: center; gap: 7px;
+    }
+    .live-dot {
+      width: 6px; height: 6px; border-radius: 50%; background: var(--emerald);
+    }
+
+    /* ── STATS BAR ────────────────────────────────── */
+    .stats-bar {
+      border-top: 1px solid var(--border); border-bottom: 1px solid var(--border);
+      padding: 28px 0;
+    }
+    .stats-grid {
+      display: grid; grid-template-columns: repeat(4,1fr);
+    }
+    .stat-item {
+      text-align: center; padding: 0 24px;
+      border-right: 1px solid var(--border);
+    }
+    .stat-item:last-child { border-right: none; }
+    .stat-value {
+      font-size: 30px; font-weight: 900; letter-spacing: -0.02em;
+      line-height: 1; margin-bottom: 6px;
+    }
+    .stat-label { font-size: 13px; color: var(--text-dim); }
+
+    /* ── FEATURES ─────────────────────────────────── */
+    #why { padding: 88px 0; }
+    .features-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 52px;
+    }
+    .feature-card {
+      padding: 28px;
+      transition: border-color 0.2s, transform 0.2s;
+    }
+    .feature-card:hover { border-color: rgba(99,102,241,0.35); transform: translateY(-3px); }
+
+    .feature-num {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 13px; font-weight: 700;
+      margin-bottom: 18px; flex-shrink: 0;
+    }
+    .feature-title { font-size: 16px; font-weight: 700; margin-bottom: 10px; color: var(--text); }
+    .feature-desc  { font-size: 14px; color: var(--text-muted); line-height: 1.65; }
+
+    /* ── PORTAL ───────────────────────────────────── */
+    #portal { padding: 88px 0; border-top: 1px solid var(--border); }
+
+    .two-col {
+      display: grid; grid-template-columns: 1fr 1fr; gap: 64px;
+      align-items: center; margin-top: 52px;
+    }
+
+    .screenshot-frame {
+      border-radius: var(--r-lg); overflow: hidden;
+      border: 1px solid var(--border-2);
+    }
+    .screenshot-frame img { width: 100%; display: block; }
+
+    .portal-list { display: flex; flex-direction: column; gap: 22px; }
+    .portal-item  { display: flex; gap: 16px; align-items: flex-start; }
+
+    .portal-item-icon {
+      width: 38px; height: 38px; border-radius: 10px;
+      display: flex; align-items: center; justify-content: center;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 12px; font-weight: 700; flex-shrink: 0;
+    }
+    .portal-item h4 { font-size: 15px; font-weight: 700; margin-bottom: 5px; color: var(--text); }
+    .portal-item p  { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+    /* callout boxes */
+    .callout {
+      background: var(--brand-dim);
+      border: 1px solid rgba(99,102,241,0.22);
+      border-radius: 10px; padding: 13px 16px;
+      font-size: 13px; color: var(--text-muted); margin-top: 14px;
+    }
+    .callout strong { color: var(--brand-light); }
+
+    .note {
+      background: rgba(34,211,238,0.06);
+      border: 1px solid rgba(34,211,238,0.18);
+      border-radius: 10px; padding: 13px 16px;
+      font-size: 13px; color: var(--text-muted); margin-top: 14px;
+    }
+    .note strong { color: var(--sky); }
+
+    /* ── UX ───────────────────────────────────────── */
+    #ux { padding: 88px 0; border-top: 1px solid var(--border); }
+
+    .ux-points { display: flex; flex-direction: column; gap: 20px; }
+    .ux-point  { display: flex; gap: 16px; align-items: flex-start; }
+    .ux-num {
+      width: 28px; height: 28px; border-radius: 50%;
+      background: var(--brand-dim);
+      border: 1px solid rgba(99,102,241,0.28);
+      color: var(--brand-light);
+      font-size: 12px; font-weight: 700;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0;
+    }
+    .ux-point h4 { font-size: 15px; font-weight: 700; margin-bottom: 4px; color: var(--text); }
+    .ux-point p  { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+    .phone-wrap { display: flex; justify-content: center; align-items: center; }
+    .phone-wrap img {
+      max-width: 280px; width: 100%;
+      border-radius: 36px;
+      border: 1px solid var(--border-2);
+    }
+
+    /* ── QUICKSTART ───────────────────────────────── */
+    #quickstart { padding: 88px 0; border-top: 1px solid var(--border); }
+
+    .steps { display: flex; flex-direction: column; gap: 48px; margin-top: 52px; }
+    .step  { display: grid; grid-template-columns: 48px 1fr; gap: 24px; }
+
+    .step-num {
+      width: 40px; height: 40px; border-radius: 50%;
+      background: var(--brand); color: #fff;
+      font-size: 16px; font-weight: 800;
+      display: flex; align-items: center; justify-content: center; flex-shrink: 0; margin-top: 3px;
+    }
+
+    .step-content h3 { font-size: 20px; margin-bottom: 10px; }
+    .step-content > p { font-size: 14px; color: var(--text-muted); margin-bottom: 16px; line-height: 1.7; }
+
+    pre[class*="language-"] {
+      border-radius: 12px !important;
+      border: 1px solid var(--border-2) !important;
+      background: #0d1117 !important;
+      font-size: 13px !important; line-height: 1.75 !important;
+      margin: 0 !important;
+      font-family: 'JetBrains Mono', monospace !important;
+    }
+    .code-gap { margin-top: 12px; }
+
+    /* ── NEXT STEPS ───────────────────────────────── */
+    #next-steps { padding: 88px 0; border-top: 1px solid var(--border); }
+
+    .next-grid {
+      display: grid; grid-template-columns: repeat(3,1fr); gap: 16px; margin-top: 52px;
+    }
+    .next-card {
+      padding: 26px;
+      transition: border-color 0.2s, transform 0.2s; cursor: pointer;
+    }
+    .next-card:hover { border-color: rgba(99,102,241,0.35); transform: translateY(-2px); }
+
+    .next-tag {
+      display: inline-block; font-size: 11px; font-weight: 600;
+      padding: 3px 10px; border-radius: 20px; margin-bottom: 14px;
+      letter-spacing: 0.04em; text-transform: uppercase;
+    }
+    .next-card h4 { font-size: 15px; font-weight: 700; color: var(--text); margin-bottom: 8px; }
+    .next-card p  { font-size: 13px; color: var(--text-muted); line-height: 1.6; }
+
+    /* CTA block */
+    .cta-block {
+      margin-top: 64px; text-align: center; padding: 56px 40px;
+      border-radius: var(--r-lg);
+    }
+    .cta-block h3 { font-size: 26px; font-weight: 800; margin-bottom: 14px; }
+    .cta-block p  { color: var(--text-muted); font-size: 15px; margin-bottom: 32px; max-width: 480px; margin-left: auto; margin-right: auto; line-height: 1.7; }
+    .cta-btns { display: flex; justify-content: center; gap: 12px; }
+
+    /* ── FOOTER ───────────────────────────────────── */
+    footer {
+      border-top: 1px solid var(--border);
+      padding: 32px 0; text-align: center;
+    }
+    footer p { font-size: 13px; color: var(--text-dim); }
+
+    /* ── MISC ─────────────────────────────────────── */
+    .divider { height: 1px; background: var(--border); }
+  </style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════
+     NAV
+════════════════════════════════════════════════ -->
+<nav>
+  <a class="nav-brand" href="#">
+    <div class="nav-brand-icon">VS</div>
+    Virality SDK
+  </a>
+  <ul class="nav-links">
+    <li><a href="#why">Why</a></li>
+    <li><a href="#portal">Portal</a></li>
+    <li><a href="#ux">User Experience</a></li>
+    <li><a href="#quickstart">Quickstart</a></li>
+    <li><a href="#next-steps">Docs</a></li>
+    <li><a href="#quickstart" class="btn btn-primary btn-sm" style="color:#fff">Get started</a></li>
+  </ul>
+</nav>
+
+
+<!-- ══════════════════════════════════════════════
+     HERO
+════════════════════════════════════════════════ -->
+<section id="hero">
+  <div class="container">
+
+    <div class="badge-row">
+      <span class="badge"><span class="badge-dot" style="background:var(--brand)"></span>minSdk 23</span>
+      <span class="badge"><span class="badge-dot" style="background:var(--brand-light)"></span>Kotlin 2.0</span>
+      <span class="badge"><span class="badge-dot" style="background:var(--sky)"></span>Jetpack Compose</span>
+      <span class="badge"><span class="badge-dot" style="background:var(--emerald)"></span>~10 lines to integrate</span>
+      <span class="badge"><span class="badge-dot" style="background:var(--amber)"></span>Offline-first</span>
+    </div>
+
+    <h1 class="hero-headline">
+      Your <em>viral growth loop</em><br>ships in an afternoon.
+    </h1>
+
+    <p class="hero-sub">
+      A drop-in Gamified Referral SDK for Android — invite links, deep-link attribution,
+      a reactive points economy, and a ready-made Compose UI. One dependency. Zero guesswork.
+    </p>
+
+    <div class="hero-ctas">
+      <a href="#quickstart" class="btn btn-primary">Get started in 3 steps</a>
+      <a href="https://github.com/idolev77/ReferralVirality" class="btn btn-outline">View on GitHub</a>
+    </div>
+
+    <div class="media-frame">
+      <video autoplay muted loop playsinline poster="assets/portal-dashboard.png">
+        <source src="assets/demo.mp4" type="video/mp4" />
+        <img src="assets/portal-dashboard.png" alt="Virality SDK demo" />
+      </video>
+      <div class="media-label">
+        <span class="live-dot"></span>
+        1-minute integration demo
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     STATS BAR
+════════════════════════════════════════════════ -->
+<div class="stats-bar">
+  <div class="container">
+    <div class="stats-grid">
+      <div class="stat-item">
+        <div class="stat-value" style="color:var(--brand)">~10</div>
+        <div class="stat-label">lines to integrate</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color:var(--sky)">4</div>
+        <div class="stat-label">funnel stages tracked</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color:var(--emerald)">0</div>
+        <div class="stat-label">runtime permissions</div>
+      </div>
+      <div class="stat-item">
+        <div class="stat-value" style="color:var(--amber)">24 h</div>
+        <div class="stat-label">offline-first cache</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+
+<!-- ══════════════════════════════════════════════
+     WHY
+════════════════════════════════════════════════ -->
+<section id="why">
+  <div class="container">
+    <p class="section-label">Why choose our SDK</p>
+    <h2>Everything a viral loop needs.<br>Nothing it doesn't.</h2>
+
+    <div class="features-grid">
+
+      <div class="card feature-card">
+        <div class="feature-num" style="background:var(--brand-dim);color:var(--brand-light)">01</div>
+        <div class="feature-title">Full funnel attribution</div>
+        <div class="feature-desc">One call to <code>handleDeepLink(intent)</code> resolves
+          <code>generated → click → install → attributed</code>.
+          No SDK soup, no fragile Intent parsing, no guesswork.
+        </div>
+      </div>
+
+      <div class="card feature-card">
+        <div class="feature-num" style="background:rgba(34,211,238,0.1);color:var(--sky)">02</div>
+        <div class="feature-title">Offline-first by design</div>
+        <div class="feature-desc">Room-backed reads, WorkManager-backed writes with exponential backoff.
+          <code>generateInviteLink()</code> falls back to a deterministic per-user code — the UI never blocks.
+        </div>
+      </div>
+
+      <div class="card feature-card">
+        <div class="feature-num" style="background:rgba(52,211,153,0.1);color:var(--emerald)">03</div>
+        <div class="feature-title">Drop-in Compose UI</div>
+        <div class="feature-desc"><code>ReferralBottomSheet</code> is a single composable: invite CTA,
+          native share handoff, and confetti included. Inherits your Material 3 theme automatically on day one.
+        </div>
+      </div>
+
+      <div class="card feature-card">
+        <div class="feature-num" style="background:rgba(245,158,11,0.1);color:var(--amber)">04</div>
+        <div class="feature-title">Reactive &amp; type-safe</div>
+        <div class="feature-desc"><code>observePointsBalance(): StateFlow&lt;Int&gt;</code> drops straight into Compose.
+          Typed errors — <code>RateLimited</code>, <code>InsufficientPoints</code>, <code>AlreadyClaimed</code> —
+          mean precise UX, not a generic "something went wrong."
+        </div>
+      </div>
+
+      <div class="card feature-card">
+        <div class="feature-num" style="background:var(--brand-dim);color:var(--brand-light)">05</div>
+        <div class="feature-title">Remote config, zero redeploys</div>
+        <div class="feature-desc">Change <code>points_per_referral</code>, the welcome bonus, or caps
+          from the Campaign Manager. The SDK hot-reloads on its next <code>getConfig()</code> call —
+          no app update required.
+        </div>
+      </div>
+
+      <div class="card feature-card">
+        <div class="feature-num" style="background:rgba(244,63,94,0.1);color:var(--rose)">06</div>
+        <div class="feature-title">Anti-fraud, built in</div>
+        <div class="feature-desc">Token-bucket rate limiting (5 attributions/min), 7-day replay nonces,
+          self-referral blocking. The server is the single source of truth for every point balance.
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     PORTAL
+════════════════════════════════════════════════ -->
+<section id="portal">
+  <div class="container">
+    <p class="section-label">Developer Portal</p>
+    <h2>Your growth team's cockpit.<br>No SQL required.</h2>
+
+    <div class="two-col">
+
+      <div class="screenshot-frame">
+        <img src="assets/portal-dashboard.png" alt="Virality SDK Developer Portal — Overview dashboard showing KPI cards, conversion funnel, and live activity feed" />
+      </div>
+
+      <div class="portal-list">
+
+        <div class="portal-item">
+          <div class="portal-item-icon" style="background:var(--brand-dim);color:var(--brand-light)">FA</div>
+          <div>
+            <h4>Funnel analytics</h4>
+            <p>Conversion rates between every stage — <code>generated → click → install → attributed</code> — with period-over-period deltas on every KPI card.</p>
+          </div>
+        </div>
+
+        <div class="portal-item">
+          <div class="portal-item-icon" style="background:rgba(34,211,238,0.1);color:var(--sky)">GI</div>
+          <div>
+            <h4>Growth Insights</h4>
+            <p>Signups split organic vs. referred, the points economy (issued vs. redeemed), and a multi-level referral tree showing downstream depth.</p>
+          </div>
+        </div>
+
+        <div class="portal-item">
+          <div class="portal-item-icon" style="background:rgba(52,211,153,0.1);color:var(--emerald)">CM</div>
+          <div>
+            <h4>Campaign Manager</h4>
+            <p>Live reward-rule editor with a full change-audit history. Hit Save &amp; Sync — the change reaches every device on its next config fetch.</p>
+          </div>
+        </div>
+
+        <div class="portal-item">
+          <div class="portal-item-icon" style="background:rgba(245,158,11,0.1);color:var(--amber)">GS</div>
+          <div>
+            <h4>Growth Simulator</h4>
+            <p>K-factor viral model — tweak invite rate and conversion and project your growth curve before you tune a single reward.</p>
+          </div>
+        </div>
+
+        <div class="portal-item">
+          <div class="portal-item-icon" style="background:var(--brand-dim);color:var(--brand-light)">PG</div>
+          <div>
+            <h4>SDK Playground</h4>
+            <p>Live API tester that hits your real backend. Verify integration in seconds without touching your app code.</p>
+          </div>
+        </div>
+
+        <div class="callout">
+          <strong>Key Point:</strong> Because reward logic lives in the portal — not your APK — your growth team
+          can run experiments or fix a too-generous payout <strong>in seconds</strong>, without waiting on a store review.
+        </div>
+
+      </div>
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     USER EXPERIENCE
+════════════════════════════════════════════════ -->
+<section id="ux">
+  <div class="container">
+    <p class="section-label">The user experience</p>
+    <h2>Referrals that feel like a game,<br>not a chore.</h2>
+
+    <div class="two-col">
+
+      <div class="ux-points">
+
+        <div class="ux-point">
+          <div class="ux-num">1</div>
+          <div>
+            <h4>One-tap invite sheet</h4>
+            <p>Personal link, native Android share handoff — WhatsApp, Messages, anywhere. No custom share logic to write.</p>
+          </div>
+        </div>
+
+        <div class="ux-point">
+          <div class="ux-num">2</div>
+          <div>
+            <h4>Reactive points balance</h4>
+            <p>The balance pill animates the moment a friend is attributed — driven live by <code>observePointsBalance()</code>. No polling, no manual refresh.</p>
+          </div>
+        </div>
+
+        <div class="ux-point">
+          <div class="ux-num">3</div>
+          <div>
+            <h4>Confetti celebration moments</h4>
+            <p>Dopamine hits on every successful claim and reward — the feedback loop that drives repeat sharing.</p>
+          </div>
+        </div>
+
+        <div class="ux-point">
+          <div class="ux-num">4</div>
+          <div>
+            <h4>Daily login bonus</h4>
+            <p>Server-gated countdown, immune to device-clock manipulation — a habit loop that keeps users opening your app every single day.</p>
+          </div>
+        </div>
+
+        <div class="ux-point">
+          <div class="ux-num">5</div>
+          <div>
+            <h4>Rewards store</h4>
+            <p>Points unlock real in-app value. Items flip to Owned on success with immediate visual feedback.</p>
+          </div>
+        </div>
+
+        <div class="note">
+          <strong>Live demo:</strong> All of this runs in <strong>Portfolio Pulse</strong> — our open fintech
+          showcase built with Jetpack Compose + Material 3. Launch it with
+          <code>./gradlew :demo-app:installDebug</code>.
+        </div>
+
+      </div>
+
+      <div class="phone-wrap">
+        <img src="assets/start-frame.png" alt="Portfolio Pulse app — Growth Hub screen showing the invite button, points balance, and referral history" />
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     QUICKSTART
+════════════════════════════════════════════════ -->
+<section id="quickstart">
+  <div class="container">
+    <p class="section-label">Quickstart — Android / Kotlin</p>
+    <h2>From zero to viral loop<br>in three steps.</h2>
+    <p style="color:var(--text-muted);font-size:15px;margin-top:14px">
+      Requirements: <strong style="color:var(--text)">minSdk 23 &nbsp;·&nbsp; Kotlin 2.0+ &nbsp;·&nbsp; AGP 8.2+ &nbsp;·&nbsp; Java 17</strong>
+    </p>
+
+    <div class="steps">
+
+      <!-- STEP 1 -->
+      <div class="step">
+        <div class="step-num">1</div>
+        <div class="step-content">
+          <h3>Add the dependency</h3>
+          <p>Register the SDK's Maven repository in your root <code>settings.gradle.kts</code>, then add the SDK to your app module.</p>
+
+          <pre><code class="language-kotlin">// settings.gradle.kts
+dependencyResolutionManagement {
+    repositories {
+        google()
+        mavenCentral()
+        maven("https://maven.referralvirality.io/releases")
+    }
+}</code></pre>
+
+          <div class="code-gap">
+            <pre><code class="language-kotlin">// app/build.gradle.kts
+dependencies {
+    implementation("io.referralvirality:referral-sdk:1.0.0")
+}</code></pre>
+          </div>
+
+          <div class="callout">
+            <strong>Zero runtime permissions.</strong> The SDK merges
+            <code>INTERNET</code> and <code>ACCESS_NETWORK_STATE</code> via manifest merging automatically.
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 2 -->
+      <div class="step">
+        <div class="step-num">2</div>
+        <div class="step-content">
+          <h3>Initialize the SDK</h3>
+          <p>Call <code>ReferralSdk.init()</code> exactly once in <code>Application.onCreate()</code> — it's idempotent and safe. After sign-in, bind the user's stable ID.</p>
+
+          <pre><code class="language-kotlin">class MyApp : Application() {
+    override fun onCreate() {
+        super.onCreate()
+        ReferralSdk.init(
+            context   = this,
+            apiKey    = BuildConfig.REFERRAL_API_KEY,  // keep secrets out of source
+            projectId = "proj_abc123"
+        )
+    }
+}
+
+// After your user authenticates
+ReferralSdk.setUserId(authRepository.currentUserId)</code></pre>
+
+          <div class="callout">
+            <strong>Key Point:</strong> Use a stable, non-PII identifier — Firebase UID or your DB primary key.
+            Never email or display name. It must stay constant for the same user across sessions.
+          </div>
+        </div>
+      </div>
+
+      <!-- STEP 3 -->
+      <div class="step">
+        <div class="step-num">3</div>
+        <div class="step-content">
+          <h3>Launch the referral flow</h3>
+          <p>Drop the ready-made invite sheet into your Compose tree and handle the incoming deep link to close the attribution loop.</p>
+
+          <pre><code class="language-kotlin">@Composable
+fun GrowthCta() {
+    var showInvite by remember { mutableStateOf(false) }
+
+    // Live, reactive balance — straight from the SDK
+    val points by ReferralSdk.observePointsBalance().collectAsState()
+
+    Column {
+        Text("You have $points pts")
+        Button(onClick = { showInvite = true }) {
+            Text("Invite friends")
+        }
+    }
+
+    if (showInvite) {
+        // Invite link, native share handoff, confetti — all included
+        ReferralBottomSheet(onDismiss = { showInvite = false })
+    }
+}</code></pre>
+
+          <div class="code-gap">
+            <pre><code class="language-kotlin">// In your launcher Activity — closes the attribution loop
+override fun onCreate(savedInstanceState: Bundle?) {
+    super.onCreate(savedInstanceState)
+    ReferralSdk.handleDeepLink(intent)        // cold start
+}
+
+override fun onNewIntent(intent: Intent) {
+    super.onNewIntent(intent)
+    ReferralSdk.handleDeepLink(intent)        // warm start
+}</code></pre>
+          </div>
+
+          <div class="code-gap">
+            <pre><code class="language-xml">&lt;!-- AndroidManifest.xml — intent filter on your launcher activity --&gt;
+&lt;intent-filter&gt;
+    &lt;action android:name="android.intent.action.VIEW" /&gt;
+    &lt;category android:name="android.intent.category.DEFAULT" /&gt;
+    &lt;category android:name="android.intent.category.BROWSABLE" /&gt;
+    &lt;data android:scheme="referralsdk" android:host="invite" /&gt;
+&lt;/intent-filter&gt;</code></pre>
+          </div>
+
+          <div class="callout">
+            <strong>Tip:</strong> No device handy? Simulate a referral install via ADB:<br /><br />
+            <code>adb shell am start -a android.intent.action.VIEW -d "referralsdk://invite?code=DEMO42" your.app.id</code>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     NEXT STEPS
+════════════════════════════════════════════════ -->
+<section id="next-steps">
+  <div class="container">
+    <p class="section-label">Next steps</p>
+    <h2>Go deeper.</h2>
+
+    <div class="next-grid">
+
+      <div class="card next-card">
+        <span class="next-tag" style="background:var(--brand-dim);color:var(--brand-light)">UI</span>
+        <h4>Customizing the UI</h4>
+        <p>Theme the <code>ReferralBottomSheet</code>, tune the confetti, or build a fully custom experience on the SDK's reactive state.</p>
+      </div>
+
+      <div class="card next-card">
+        <span class="next-tag" style="background:rgba(34,211,238,0.1);color:var(--sky)">Analytics</span>
+        <h4>Advanced Analytics &amp; Portal</h4>
+        <p>Read the funnel, model your K-factor in the Growth Simulator, and run live campaigns from the Campaign Manager.</p>
+      </div>
+
+      <div class="card next-card">
+        <span class="next-tag" style="background:rgba(52,211,153,0.1);color:var(--emerald)">Config</span>
+        <h4>Remote Config Deep Dive</h4>
+        <p>Drive in-app reward logic from <code>getConfig()</code> and <code>observeConfig()</code> so your growth team ships without an app update.</p>
+      </div>
+
+      <div class="card next-card">
+        <span class="next-tag" style="background:var(--brand-dim);color:var(--brand-light)">Errors</span>
+        <h4>Error Handling &amp; Offline</h4>
+        <p>Handle every typed <code>ReferralError</code>, understand the WorkManager sync queue, and design graceful offline UX.</p>
+      </div>
+
+      <div class="card next-card">
+        <span class="next-tag" style="background:rgba(245,158,11,0.1);color:var(--amber)">Gamification</span>
+        <h4>Daily Bonus &amp; Points Economy</h4>
+        <p>Wire up <code>claimDailyBonus()</code>, render server-authoritative countdowns, and build a rewards store.</p>
+      </div>
+
+      <div class="card next-card">
+        <span class="next-tag" style="background:rgba(244,63,94,0.1);color:var(--rose)">Security</span>
+        <h4>Anti-Fraud &amp; Security</h4>
+        <p>How rate limiting, replay nonces, and server-side attribution keep your points economy honest.</p>
+      </div>
+
+    </div>
+
+    <!-- FINAL CTA -->
+    <div class="card cta-block">
+      <h3>Ready to grow?</h3>
+      <p>Clone Portfolio Pulse, spin up the backend with Docker Compose, and see the full viral loop running in under 10 minutes.</p>
+      <div class="cta-btns">
+        <a href="https://github.com/idolev77/ReferralVirality" class="btn btn-primary">Explore the showcase</a>
+        <a href="#quickstart" class="btn btn-outline">Read the API reference</a>
+      </div>
+    </div>
+
+  </div>
+</section>
+
+
+<!-- ══════════════════════════════════════════════
+     FOOTER
+════════════════════════════════════════════════ -->
+<footer>
+  <div class="container">
+    <p>Gamified Referral &amp; Virality SDK — Commercial License</p>
+  </div>
+</footer>
+
+
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/prism.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-kotlin.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/prism/1.29.0/components/prism-markup.min.js"></script>
+
+</body>
+</html>
