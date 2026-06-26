@@ -10,25 +10,23 @@ A production-ready, drop-in referral engine for mobile and web apps — with a f
 
 ## Visuals
 
+### Demo Video
+
 <p align="center">
-  <img src="docs/screenshot-overview.png" width="280" alt="Dashboard Overview" />
-  &nbsp;&nbsp;
-  <img src="docs/screenshot-insights.png" width="280" alt="Growth Insights" />
-  &nbsp;&nbsp;
-  <img src="docs/screenshot-campaign.png" width="280" alt="Campaign Manager" />
-</p>
-<p align="center">
-  <img src="docs/screenshot-geo.png" width="280" alt="Demographics & Stability" />
-  &nbsp;&nbsp;
-  <img src="docs/screenshot-playground.png" width="280" alt="SDK Playground" />
-  &nbsp;&nbsp;
-  <img src="docs/screenshot-diagrams.png" width="280" alt="Architecture Diagrams" />
-</p>
-<p align="center">
-  <img src="docs/screenshot-guide.png" width="600" alt="Integration Guide" />
+  <a href="docs/assets/demo.mp4">
+    <img src="docs/assets/portal-dashboard.png" width="600" alt="Watch the demo video" />
+  </a>
 </p>
 
-> Real screenshots captured from the live developer portal (`http://localhost:5173`) via Playwright headless Chromium.
+> ▶️ **[Watch the demo video](docs/assets/demo.mp4)** — full walkthrough of the SDK and developer portal.
+
+### Developer Portal
+
+<p align="center">
+  <img src="docs/screenshot-overview.png" width="600" alt="Developer Portal — Overview dashboard" />
+</p>
+
+> Live developer portal — KPI cards, conversion funnel, referral trend and real-time activity feed.
 
 ---
 
