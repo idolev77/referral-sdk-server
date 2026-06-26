@@ -1,0 +1,1489 @@
+<!DOCTYPE html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0" />
+<title>Virality SDK — מצגת פרויקט סמינר</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Heebo:wght@300;400;500;600;700;800;900&display=swap" rel="stylesheet">
+<style>
+  /* ============ Design Tokens ============ */
+  :root {
+    --bg: #070b18;
+    --bg-soft: #0e1428;
+    --card: #141d38;
+    --card-2: #1a2547;
+    --card-3: #202c54;
+    --border: #283766;
+    --border-soft: #1f2c52;
+    --text: #eef2ff;
+    --muted: #9aabd6;
+    --muted-2: #6f80aa;
+    --brand: #5b8cff;
+    --brand-2: #8b5cf6;
+    --accent: #22d3ee;
+    --green: #34d399;
+    --amber: #fbbf24;
+    --red: #fb7185;
+    --pink: #f472b6;
+    --radius: 18px;
+    --radius-lg: 24px;
+    --shadow: 0 24px 60px rgba(0,0,0,.5);
+    --shadow-glow: 0 10px 40px rgba(91,140,255,.25);
+    --grad: linear-gradient(135deg, #5b8cff, #8b5cf6);
+    --grad-2: linear-gradient(135deg, #22d3ee, #5b8cff);
+    --grad-3: linear-gradient(135deg, #34d399, #22d3ee);
+    --grad-warm: linear-gradient(135deg, #fbbf24, #f472b6);
+  }
+
+  * { box-sizing: border-box; margin: 0; padding: 0; }
+
+  html, body {
+    height: 100%;
+    font-family: "Heebo", system-ui, -apple-system, sans-serif;
+    background:
+      radial-gradient(1400px 900px at 85% -15%, rgba(139,92,246,.22) 0%, transparent 55%),
+      radial-gradient(1200px 800px at -10% 110%, rgba(34,211,238,.16) 0%, transparent 50%),
+      radial-gradient(900px 700px at 50% 50%, rgba(91,140,255,.05) 0%, transparent 70%),
+      var(--bg);
+    color: var(--text);
+    overflow: hidden;
+  }
+
+  /* subtle grid texture */
+  body::before {
+    content: "";
+    position: fixed; inset: 0;
+    background-image:
+      linear-gradient(rgba(255,255,255,.022) 1px, transparent 1px),
+      linear-gradient(90deg, rgba(255,255,255,.022) 1px, transparent 1px);
+    background-size: 46px 46px;
+    pointer-events: none;
+    z-index: 0;
+  }
+
+  /* ============ Stage ============ */
+  .stage {
+    position: relative;
+    z-index: 1;
+    height: 100vh;
+    width: 100vw;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    overflow: hidden;
+  }
+
+  /* Fixed-size design surface — scaled by JS so the whole slide always fits */
+  .deck {
+    position: relative;
+    width: 1220px;
+    height: 780px;
+    flex-shrink: 0;
+    transform-origin: center center;
+    will-change: transform;
+  }
+
+  .slide {
+    display: none;
+    position: absolute;
+    inset: 0;
+    width: 100%;
+    height: 100%;
+    background:
+      linear-gradient(180deg, rgba(20,29,56,.92), rgba(14,20,40,.92));
+    border: 1px solid var(--border);
+    border-radius: 26px;
+    box-shadow: var(--shadow);
+    backdrop-filter: blur(10px);
+    padding: 42px 50px;
+    overflow: hidden;
+    position: relative;
+  }
+  .slide.active { display: flex; flex-direction: column; animation: slideIn .5s cubic-bezier(.22,.61,.36,1); }
+
+  /* top accent line */
+  .slide::after {
+    content: "";
+    position: absolute; top: 0; left: 0; right: 0; height: 4px;
+    background: var(--grad);
+    border-radius: 26px 26px 0 0;
+  }
+
+  @keyframes slideIn {
+    from { opacity: 0; transform: translateY(24px) scale(.985); }
+    to   { opacity: 1; transform: translateY(0) scale(1); }
+  }
+  .stagger > * { opacity: 0; animation: pop .5s ease forwards; }
+  .stagger > *:nth-child(1){animation-delay:.06s}
+  .stagger > *:nth-child(2){animation-delay:.12s}
+  .stagger > *:nth-child(3){animation-delay:.18s}
+  .stagger > *:nth-child(4){animation-delay:.24s}
+  .stagger > *:nth-child(5){animation-delay:.30s}
+  .stagger > *:nth-child(6){animation-delay:.36s}
+  @keyframes pop { from{opacity:0;transform:translateY(14px)} to{opacity:1;transform:translateY(0)} }
+
+  /* ============ Typography ============ */
+  .eyebrow {
+    display: inline-flex; align-items: center; gap: 8px;
+    font-size: 13px; font-weight: 700; letter-spacing: .4px;
+    color: var(--accent);
+    background: rgba(34,211,238,.1);
+    border: 1px solid rgba(34,211,238,.28);
+    padding: 7px 16px; border-radius: 999px; margin-bottom: 16px;
+  }
+  h1 { font-size: 52px; line-height: 1.1; font-weight: 900; letter-spacing: -1px; }
+  h2 { font-size: 32px; font-weight: 800; margin-bottom: 6px; letter-spacing: -.4px; }
+  h3 { font-size: 18px; font-weight: 700; }
+  .sub { color: var(--muted); font-size: 16.5px; line-height: 1.65; margin-top: 10px; }
+  .grad-text { background: var(--grad-2); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .grad-warm-text { background: var(--grad-warm); -webkit-background-clip: text; background-clip: text; color: transparent; }
+  .highlight { color: #fff; font-weight: 800; background: linear-gradient(180deg, transparent 58%, rgba(139,92,246,.4) 58%); padding: 0 3px; border-radius: 2px; }
+  b, strong { color: #fff; font-weight: 700; }
+
+  .slide-head { margin-bottom: 24px; flex-shrink: 0; }
+  .slide-num { position: absolute; top: 34px; left: 50px; font-size: 13px; font-weight: 700; color: var(--muted-2); letter-spacing: 1px; }
+
+  /* ============ Grid helpers ============ */
+  .grid { display: grid; gap: 18px; }
+  .g2 { grid-template-columns: repeat(2, 1fr); }
+  .g3 { grid-template-columns: repeat(3, 1fr); }
+  .g4 { grid-template-columns: repeat(4, 1fr); }
+  .fill { flex: 1; min-height: 0; }
+
+  /* ============ Cards ============ */
+  .card {
+    background: linear-gradient(180deg, var(--card), var(--card-2));
+    border: 1px solid var(--border);
+    border-radius: var(--radius);
+    padding: 22px;
+    display: flex; flex-direction: column; gap: 10px;
+    position: relative;
+    transition: transform .25s ease, border-color .25s ease, box-shadow .25s ease;
+  }
+  .card:hover { transform: translateY(-4px); border-color: rgba(91,140,255,.5); box-shadow: var(--shadow-glow); }
+  .card .ico {
+    width: 50px; height: 50px; display: grid; place-items: center;
+    border-radius: 14px; background: var(--grad); font-size: 24px;
+    box-shadow: 0 8px 22px rgba(91,140,255,.4);
+  }
+  .card h3 { font-size: 17px; }
+  .card p { color: var(--muted); font-size: 14px; line-height: 1.6; }
+
+  .card.glow { border-color: rgba(139,92,246,.55); background: linear-gradient(180deg, rgba(30,30,70,.9), rgba(24,22,58,.9)); box-shadow: 0 0 0 1px rgba(139,92,246,.2), 0 16px 36px rgba(139,92,246,.18); }
+  .card.glow .ico { background: var(--grad-warm); box-shadow: 0 8px 22px rgba(244,114,182,.4); }
+  .card.glow::before {
+    content: "צמיחה"; position: absolute; top: 14px; left: 14px;
+    font-size: 10px; font-weight: 800; letter-spacing: .5px;
+    color: var(--amber); background: rgba(251,191,36,.12);
+    border: 1px solid rgba(251,191,36,.3); padding: 3px 9px; border-radius: 999px;
+  }
+
+  /* Stat cards */
+  .stat { text-align: center; gap: 4px; align-items: center; }
+  .stat .num { font-size: 34px; font-weight: 900; background: var(--grad-2); -webkit-background-clip: text; background-clip: text; color: transparent; line-height: 1.1; }
+  .stat .lbl { color: var(--muted); font-size: 13.5px; line-height: 1.4; }
+
+  /* ============ Lists ============ */
+  ul.feat { list-style: none; display: flex; flex-direction: column; gap: 10px; }
+  ul.feat li { display: flex; gap: 11px; align-items: flex-start; font-size: 14.5px; line-height: 1.5; color: var(--text); }
+  ul.feat li::before { content: "✓"; flex-shrink: 0; width: 22px; height: 22px; display: grid; place-items: center; border-radius: 7px; background: rgba(52,211,153,.16); color: var(--green); font-size: 12px; font-weight: 800; margin-top: 1px; }
+
+  .pill { display:inline-block; font-size: 11.5px; font-weight: 800; padding: 4px 11px; border-radius: 999px; }
+  .pill.pub { background: rgba(52,211,153,.16); color: var(--green); }
+  .pill.int { background: rgba(139,92,246,.2); color: #c4b5fd; }
+
+  /* ============ Code / API ============ */
+  code { font-family: "Consolas","SF Mono",monospace; direction: ltr; unicode-bidi: embed; }
+  .api-list { display: flex; flex-direction: column; gap: 8px; }
+  .api-item { display: flex; align-items: center; gap: 12px; background: var(--card-2); border: 1px solid var(--border-soft); border-radius: 11px; padding: 10px 15px; transition: .2s; }
+  .api-item:hover { border-color: var(--brand); background: var(--card-3); }
+  .api-item .fn { font-family: "Consolas",monospace; direction: ltr; color: #8ab4ff; font-size: 13.5px; font-weight: 700; min-width: 158px; }
+  .api-item .desc { color: var(--muted); font-size: 13px; }
+
+  .method { font-family: "Consolas",monospace; font-weight: 800; font-size: 11px; padding: 4px 9px; border-radius: 6px; min-width: 48px; text-align: center; }
+  .post { background: rgba(52,211,153,.16); color: var(--green); }
+  .get { background: rgba(91,140,255,.18); color: #8ab4ff; }
+  .put { background: rgba(251,191,36,.16); color: var(--amber); }
+
+  .ep { display: flex; align-items: center; gap: 12px; padding: 9px 14px; background: var(--card-2); border: 1px solid var(--border-soft); border-radius: 10px; transition:.2s; }
+  .ep:hover { border-color: var(--brand); }
+  .ep .path { font-family: "Consolas",monospace; direction: ltr; color: #d6e0ff; font-size: 13px; }
+  .ep .lbl { color: var(--muted); font-size: 12.5px; margin-right: auto; }
+
+  /* Slide 7 — fuller API lists: tighten spacing so 9 items never overflow */
+  .api-compact .api-list { gap: 6px; }
+  .api-compact .api-item { padding: 8px 15px; }
+
+  .codeblock { direction: ltr; text-align: left; font-family: "Consolas",monospace; font-size: 12.5px; line-height: 1.7; background: #0a0f22; border: 1px solid var(--border); border-radius: 12px; padding: 14px 16px; color: #c8d4f5; overflow:auto; }
+  .codeblock .kw { color: #c792ea; } .codeblock .fn2 { color: #82aaff; } .codeblock .str { color: #c3e88d; } .codeblock .cm { color: #5f7299; }
+
+  /* ============ Two column boxes ============ */
+  .two-col { display: grid; grid-template-columns: 1fr 1fr; gap: 22px; flex: 1; min-height: 0; }
+  .col-box { background: linear-gradient(180deg, var(--card), var(--card-2)); border:1px solid var(--border); border-radius: var(--radius); padding: 22px; display:flex; flex-direction:column; gap: 14px; }
+  .col-box.pub-box { border-color: rgba(52,211,153,.4); }
+  .col-box.int-box { border-color: rgba(139,92,246,.4); }
+  .box-title { display:flex; align-items:center; gap: 12px; }
+  .box-title .ico { width: 42px; height:42px; border-radius:12px; display:grid; place-items:center; font-size:20px; }
+  .pub-box .box-title .ico { background: rgba(52,211,153,.16); }
+  .int-box .box-title .ico { background: rgba(139,92,246,.2); }
+
+  /* ============ DB schema ============ */
+  .db-table { background: linear-gradient(180deg, var(--card), var(--card-2)); border: 1px solid var(--border); border-radius: 14px; overflow: hidden; }
+  .db-table .t-head { background: var(--grad); padding: 10px 15px; font-weight: 800; font-size: 14px; display:flex; align-items:center; gap:8px; }
+  .db-table .t-body { padding: 11px 15px; display:flex; flex-direction:column; gap:6px; }
+  .db-table .row { display:flex; justify-content:space-between; align-items:center; font-size: 12.5px; }
+  .db-table .row .k { font-family:"Consolas",monospace; color:#d6e0ff; direction:ltr; }
+  .db-table .row .ty { color: var(--muted-2); font-family:"Consolas",monospace; direction:ltr; font-size: 11px; }
+  .db-key { color: var(--amber) !important; }
+
+  /* example "what is stored" box inside the Postgres / Redis cards (slide 9) */
+  .db-ex { margin-top:auto; background:#0a0f22; border:1px solid var(--border); border-radius:11px; padding:10px 13px; }
+  .db-ex .exh { font-size:11.5px; font-weight:700; color:var(--muted); margin-bottom:7px; }
+  .db-ex .exc { margin:0; font-family:"Consolas",monospace; direction:ltr; text-align:left; font-size:11px; line-height:1.75; color:#c8d4f5; white-space:pre; overflow-x:auto; }
+  .db-ex .kk { color:#8ab4ff; } .db-ex .vv { color:#c3e88d; } .db-ex .tt { color:#fcd34d; }
+
+  /* ============ Portal Wireframe ============ */
+  .portal-wire {
+    display: grid;
+    grid-template-columns: 218px 1fr;
+    grid-template-rows: 58px 1fr;
+    gap: 14px;
+    background: #0a0f22;
+    border: 1px solid var(--border);
+    border-radius: 18px;
+    padding: 16px;
+    height: 100%;
+    box-shadow: inset 0 0 60px rgba(0,0,0,.3);
+  }
+  .wire-header { grid-column: 1 / -1; background: var(--card-2); border: 1px solid var(--border); border-radius: 12px; display: flex; align-items: center; padding: 0 18px; gap: 12px; }
+  .wire-sidebar { background: var(--card-2); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display: flex; flex-direction: column; gap: 9px; }
+  .wire-nav { height: 32px; border-radius: 9px; background: rgba(255,255,255,.04); display:flex; align-items:center; padding: 0 12px; font-size: 12.5px; color: var(--muted); gap:8px; }
+  .wire-nav.on { background: var(--grad); color: #fff; font-weight: 700; box-shadow: var(--shadow-glow); }
+  .wire-main { display: flex; flex-direction: column; gap: 14px; }
+  .wire-stats { display: grid; grid-template-columns: repeat(4,1fr); gap: 12px; }
+  .wire-stat { height: 74px; background: var(--card); border: 1px solid var(--border); border-radius: 12px; display:flex; flex-direction: column; justify-content:center; align-items:flex-start; gap:7px; padding: 0 14px; }
+  .wire-stat .b1 { width: 52px; height: 12px; border-radius: 5px; background: var(--grad-2); }
+  .wire-stat .b2 { width: 72px; height: 7px; border-radius: 4px; background: rgba(255,255,255,.12); }
+  .wire-charts { display: grid; grid-template-columns: 1.7fr 1fr; gap: 14px; flex: 1; }
+  .wire-chart { background: var(--card); border: 1px solid var(--border); border-radius: 12px; padding: 16px; display:flex; flex-direction: column; gap: 12px; }
+  .wire-bars { display:flex; align-items:flex-end; gap: 12px; height: 100%; padding-top: 6px; }
+  .wire-bars span { flex:1; border-radius: 7px 7px 0 0; background: var(--grad); }
+  .wire-rows { display:flex; flex-direction:column; gap:9px; padding-top: 4px; }
+  .wire-rows .r { height: 15px; border-radius:5px; background: rgba(255,255,255,.07); }
+  .wire-rows .r:nth-child(odd){ background: rgba(255,255,255,.05); }
+  .tag { font-size:11.5px; color: var(--muted); font-weight:600; }
+  .dot-live { width:9px;height:9px;border-radius:50%;background:var(--green);box-shadow:0 0 10px var(--green); }
+
+  /* ============ Phone Wireframe ============ */
+  .phone-wrap { display:flex; align-items:center; justify-content:center; gap: 48px; }
+  .phone {
+    width: 290px; height: 100%; max-height: 540px;
+    background: #0a0f22; border: 9px solid #1c2748; border-radius: 42px;
+    padding: 16px 13px; display: flex; flex-direction: column; gap: 10px;
+    box-shadow: var(--shadow), inset 0 0 30px rgba(0,0,0,.4); position: relative;
+  }
+  .notch { position:absolute; top: 16px; left: 50%; transform: translateX(-50%); width: 100px; height: 7px; border-radius: 7px; background: #2b365e; }
+  .phone-app { flex:1; border-radius: 26px; background: linear-gradient(180deg,#121b3a,#0c1430); border:1px solid var(--border); padding: 18px 16px; display:flex; flex-direction:column; gap:11px; position:relative; overflow:hidden; }
+  .ph-bar { display:flex; justify-content:space-between; align-items:center; margin-bottom:4px; }
+  .ph-avatar { width:32px;height:32px;border-radius:50%;background:var(--grad-2); }
+  .ph-line { height: 11px; border-radius: 5px; background: rgba(255,255,255,.08); }
+  .ph-line.w40 { width:40%; } .ph-line.w60 { width: 60%; } .ph-line.w80 { width: 80%; }
+  .sheet { margin-top: auto; background: linear-gradient(180deg,#1e2a58,#16204a); border:1px solid var(--brand); border-radius: 26px 26px 18px 18px; padding: 20px 18px; display:flex; flex-direction:column; gap:13px; box-shadow: 0 -12px 36px rgba(0,0,0,.5); }
+  .sheet-handle { width: 46px; height: 5px; border-radius:5px; background: #4a578a; margin: 0 auto; }
+  .sheet h4 { font-size: 15.5px; text-align:center; font-weight:800; }
+  .sheet .gift { font-size: 38px; text-align:center; filter: drop-shadow(0 4px 12px rgba(251,191,36,.5)); }
+  .code-box { display:flex; align-items:center; justify-content:space-between; background:#0a0f22; border:1.5px dashed var(--accent); border-radius:13px; padding: 11px 15px; }
+  .code-box .c { font-family:"Consolas",monospace; font-size: 19px; font-weight:800; letter-spacing:3px; color:#22d3ee; }
+  .code-box .cp { font-size:11.5px; color: var(--muted); }
+  .btn-share { background: var(--grad); border:none; color:#fff; font-weight:800; font-size: 14px; padding: 13px; border-radius: 13px; cursor:pointer; box-shadow: var(--shadow-glow); }
+  .phone-notes { display:flex; flex-direction:column; gap: 16px; max-width: 440px; }
+
+  /* ============ Rewards Store (example) ============ */
+  .store-list { display:flex; flex-direction:column; gap:11px; }
+  .store-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .store-row { display:flex; align-items:center; gap:14px; background: linear-gradient(180deg,var(--card),var(--card-2)); border:1px solid var(--border); border-radius:14px; padding:13px 16px; transition:.2s; }
+  .store-row:hover { border-color: rgba(251,191,36,.55); transform: translateY(-3px); box-shadow: 0 12px 28px rgba(251,191,36,.12); }
+  .store-row .si { width:46px; height:46px; border-radius:12px; display:grid; place-items:center; font-size:23px; background:rgba(251,191,36,.12); flex-shrink:0; }
+  .store-row.prem .si { background: rgba(139,92,246,.18); }
+  .store-row .info { flex:1; min-width:0; }
+  .store-row .info h4 { font-size:14.5px; font-weight:700; }
+  .store-row .info p { color:var(--muted); font-size:12px; margin-top:2px; line-height:1.4; }
+  .price { font-family:"Heebo"; font-weight:800; font-size:13.5px; color:#2a1c05; background:var(--grad-warm); padding:6px 13px; border-radius:999px; white-space:nowrap; flex-shrink:0; }
+  .owned { font-weight:800; font-size:12.5px; color:var(--green); background:rgba(52,211,153,.16); border:1px solid rgba(52,211,153,.4); padding:5px 12px; border-radius:999px; white-space:nowrap; flex-shrink:0; }
+  .loop-banner { margin-top:16px; display:flex; align-items:center; gap:14px; background:linear-gradient(135deg,rgba(139,92,246,.16),rgba(34,211,238,.12)); border:1px solid rgba(139,92,246,.45); border-radius:16px; padding:15px 20px; font-size:14.5px; line-height:1.55; }
+  .loop-banner .li { font-size:28px; flex-shrink:0; }
+
+  /* ============ Flow diagram (LTR, clean) ============ */
+  .flow { display:flex; align-items:stretch; justify-content:space-between; gap:0; direction:ltr; }
+  .flow-node { background: linear-gradient(180deg,var(--card),var(--card-2)); border:1px solid var(--border); border-radius: 14px; padding: 14px 14px; text-align:center; flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:6px; }
+  .flow-node.ok { border-color: rgba(52,211,153,.5); }
+  .flow-node .fi { font-size: 26px; }
+  .flow-node .ft { font-size: 12.5px; font-weight: 700; line-height:1.35; }
+  .flow-node .fc { font-family:"Consolas",monospace; font-size:11px; color:#8ab4ff; direction:ltr; }
+  .flow-arrow { display:flex; align-items:center; font-size: 24px; color: var(--brand); padding: 0 10px; flex-shrink:0; }
+
+  /* ============ Navigation ============ */
+  .nav {
+    position: fixed; bottom: 26px; left: 0; right: 0; z-index: 50;
+    display: flex; align-items: center; justify-content: center; gap: 16px;
+  }
+  .nav button {
+    background: linear-gradient(180deg,var(--card-2),var(--card));
+    border: 1px solid var(--border); color: var(--text);
+    width: 50px; height: 50px; border-radius: 50%; font-size: 22px;
+    cursor: pointer; display: grid; place-items: center; transition: .2s;
+  }
+  .nav button:hover:not(:disabled) { background: var(--grad); border-color: transparent; transform: translateY(-3px); box-shadow: var(--shadow-glow); }
+  .nav button:disabled { opacity: .3; cursor: not-allowed; }
+  .counter { font-size: 14px; color: var(--muted); min-width: 64px; text-align: center; font-variant-numeric: tabular-nums; font-weight: 600; }
+
+  /* Progress bar + dots */
+  .progress { position: fixed; top: 0; right: 0; height: 4px; background: var(--grad); z-index: 60; transition: width .45s cubic-bezier(.22,.61,.36,1); box-shadow: 0 0 14px rgba(91,140,255,.7); }
+  .dots { position: fixed; bottom: 26px; right: 32px; display:flex; flex-direction: row-reverse; gap: 7px; z-index: 50; }
+  .dots span { width: 9px; height: 9px; border-radius: 50%; background: var(--border); transition: .25s; cursor:pointer; }
+  .dots span.on { background: var(--grad); width: 28px; border-radius: 6px; }
+  .dots span:hover { background: var(--brand); }
+
+  .brand-tag { position: fixed; bottom: 30px; left: 32px; font-size: 12.5px; color: var(--muted-2); z-index: 40; font-weight:600; }
+  .brand-tag b { color: var(--brand); }
+
+  /* ============ Title slide ============ */
+  .hero { text-align: center; align-items: center; justify-content: center; }
+  .hero-badge { width: 96px; height: 96px; border-radius: 26px; background: var(--grad); display:grid; place-items:center; font-size: 46px; margin: 0 auto 28px; box-shadow: 0 24px 60px rgba(139,92,246,.5); animation: float 4s ease-in-out infinite; }
+  @keyframes float { 0%,100%{transform:translateY(0)} 50%{transform:translateY(-10px)} }
+  .hero .vp { margin-top: 28px; display:inline-flex; gap:10px; align-items:center; background: rgba(34,211,238,.1); border:1px solid rgba(34,211,238,.32); padding: 15px 28px; border-radius: 16px; font-size: 18px; font-weight: 700; }
+  .hero-stats { margin-top: 36px; display:grid; grid-template-columns: repeat(3,1fr); gap: 18px; width: 100%; max-width: 760px; }
+  .tri-tech { margin-top: 26px; display:flex; gap: 14px; justify-content:center; flex-wrap:wrap; }
+  .tech-chip { display:flex; align-items:center; gap:8px; background: var(--card-2); border:1px solid var(--border); border-radius: 12px; padding: 10px 18px; font-size: 14px; font-weight:600; }
+
+  .note-row { display:flex; align-items:center; gap:10px; flex-wrap:wrap; font-size: 13.5px; color: var(--muted); }
+
+  /* ============ App-types band ============ */
+  .apps-band { margin-top:18px; flex-shrink:0; background: linear-gradient(135deg, rgba(91,140,255,.1), rgba(139,92,246,.08)); border:1px solid rgba(91,140,255,.35); border-radius:16px; padding:16px 20px; }
+  .apps-band .ab-title { font-size:14px; font-weight:800; color:#fff; margin-bottom:12px; display:flex; align-items:center; gap:8px; }
+  .apps-band .ab-row { display:grid; grid-template-columns:repeat(3,1fr); gap:10px; }
+  .app-chip { display:flex; align-items:center; gap:8px; background: var(--card-2); border:1px solid var(--border); border-radius:11px; padding:10px 14px; font-size:13px; font-weight:700; color:var(--text); transition:.2s; }
+  .app-chip:hover { border-color: rgba(91,140,255,.6); transform: translateY(-2px); }
+  .app-chip small { color:var(--muted); font-weight:500; font-size:11px; display:block; margin-top:1px; }
+  .app-chip > span { display:flex; flex-direction:column; line-height:1.3; }
+
+  /* ============ Slide 2 scoped ============ */
+  .feat-grid .card { padding:18px 20px; gap:8px; }
+  .feat-grid .card .ico { width:44px; height:44px; font-size:21px; border-radius:12px; }
+  .feat-grid .card h3 { font-size:16px; }
+  .feat-grid .card p { font-size:13.3px; line-height:1.5; }
+  .feat-grid .card.glow::before { top:12px; left:12px; }
+
+  /* ============ Slide 4 — Portal screens ============ */
+  .portal-feats .pcard { padding:17px 20px; gap:9px; }
+  .portal-feats .pcard .pcard-top { display:flex; align-items:center; gap:12px; }
+  .portal-feats .pcard .ico { width:48px; height:48px; font-size:23px; border-radius:13px; }
+  .portal-feats .pcard .pnum {
+    margin-inline-start:auto; font-family:"Consolas",monospace;
+    font-size:24px; font-weight:800; color:var(--muted-2); opacity:.55; line-height:1;
+  }
+  .portal-feats .pcard h3 { font-size:18px; display:flex; align-items:center; gap:9px; flex-wrap:wrap; }
+  .portal-feats .pcard h3 .tab {
+    font-family:"Consolas",monospace; font-size:11.5px; font-weight:700; direction:ltr;
+    color:#8ab4ff; background:rgba(91,140,255,.12); border:1px solid rgba(91,140,255,.28);
+    padding:2px 9px; border-radius:999px;
+  }
+  .portal-feats .pcard p { color:var(--muted); font-size:14.5px; line-height:1.55; }
+  .portal-feats .pcard p b { color:#fff; }
+  .portal-feats .pcard.clickable { cursor:pointer; }
+  .portal-feats .pcard.clickable:hover { border-color:rgba(91,140,255,.6); box-shadow:var(--shadow-glow); }
+  .portal-feats .pcard .open-hint {
+    margin-top:2px; align-self:flex-start; display:inline-flex; align-items:center; gap:6px;
+    font-size:12px; font-weight:700; color:var(--accent);
+    background:rgba(34,211,238,.1); border:1px solid rgba(34,211,238,.3);
+    padding:4px 11px; border-radius:999px;
+  }
+
+  /* ============ Overview Modal (click card 01) ============ */
+  .modal-overlay {
+    position:fixed; inset:0; z-index:200; display:none;
+    align-items:flex-start; justify-content:center;
+    background:rgba(4,7,16,.74); backdrop-filter:blur(8px);
+    padding:38px 24px; overflow-y:auto;
+  }
+  .modal-overlay.open { display:flex; animation:fadeIn .25s ease; }
+  @keyframes fadeIn { from{opacity:0} to{opacity:1} }
+  .modal-panel {
+    position:relative; width:100%; max-width:1080px; margin:0 auto;
+    background:linear-gradient(180deg, rgba(20,29,56,.98), rgba(12,18,36,.98));
+    border:1px solid var(--border); border-radius:24px; box-shadow:var(--shadow);
+    padding:32px 36px 38px; animation:slideIn .4s cubic-bezier(.22,.61,.36,1);
+  }
+  .modal-panel::after { content:""; position:absolute; top:0; left:0; right:0; height:4px; background:var(--grad); border-radius:24px 24px 0 0; }
+  .modal-close {
+    position:absolute; top:20px; left:22px; width:38px; height:38px; border-radius:50%;
+    border:1px solid var(--border); background:var(--card-2); color:var(--text);
+    font-size:17px; cursor:pointer; display:grid; place-items:center; transition:.2s; z-index:2;
+  }
+  .modal-close:hover { background:var(--red); border-color:transparent; transform:rotate(90deg); color:#fff; }
+  .modal-head { margin-bottom:20px; }
+  .modal-head h2 { font-size:26px; }
+  .modal-head .sub { font-size:14.5px; margin-top:6px; }
+
+  .ov-stats { display:grid; grid-template-columns:repeat(4,1fr); gap:14px; margin-bottom:16px; }
+  .ov-stat { background:linear-gradient(180deg,var(--card),var(--card-2)); border:1px solid var(--border); border-radius:15px; padding:15px 17px; display:flex; flex-direction:column; gap:9px; }
+  .ov-stat .top { display:flex; align-items:center; justify-content:space-between; }
+  .ov-stat .si { width:36px; height:36px; border-radius:11px; display:grid; place-items:center; font-size:17px; background:var(--grad); }
+  .ov-stat .si.sky { background:var(--grad-2); } .ov-stat .si.em { background:var(--grad-3); } .ov-stat .si.am { background:var(--grad-warm); }
+  .ov-stat .delta { font-size:11.5px; font-weight:800; padding:3px 9px; border-radius:999px; direction:ltr; background:rgba(52,211,153,.16); color:var(--green); }
+  .ov-stat .v { font-size:27px; font-weight:900; color:#fff; line-height:1; direction:ltr; }
+  .ov-stat .l { font-size:12.5px; color:var(--muted); }
+
+  .ov-card { background:linear-gradient(180deg,var(--card),var(--card-2)); border:1px solid var(--border); border-radius:16px; padding:17px 19px; margin-bottom:15px; }
+  .ov-card .ov-title { display:flex; align-items:center; justify-content:space-between; margin-bottom:13px; }
+  .ov-card .ov-title h3 { font-size:16px; }
+  .ov-grid { display:grid; grid-template-columns:1.7fr 1fr; gap:15px; margin-bottom:15px; }
+  .ov-grid .ov-card { margin-bottom:0; }
+
+  .funnel-bars { display:flex; align-items:flex-end; gap:16px; height:172px; padding-top:6px; }
+  .funnel-bars .fb { flex:1; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:8px; height:100%; }
+  .funnel-bars .fb .bar { width:100%; border-radius:9px 9px 0 0; background:var(--grad); min-height:8px; transition:height .8s cubic-bezier(.22,.61,.36,1); }
+  .funnel-bars .fb:nth-child(2) .bar { background:var(--grad-2); }
+  .funnel-bars .fb:nth-child(3) .bar { background:var(--grad-3); }
+  .funnel-bars .fb:nth-child(4) .bar { background:var(--grad-warm); }
+  .funnel-bars .fb .fv { font-size:14.5px; font-weight:800; color:#fff; direction:ltr; }
+  .funnel-bars .fb .fs { font-size:11.5px; color:var(--muted); text-align:center; }
+
+  .ov-table { width:100%; border-collapse:collapse; font-size:13px; }
+  .ov-table th { text-align:right; font-size:10.5px; text-transform:uppercase; letter-spacing:.5px; color:var(--muted-2); font-weight:700; padding-bottom:9px; }
+  .ov-table th.r, .ov-table td.r { text-align:left; }
+  .ov-table td { padding:8px 0; border-top:1px solid rgba(255,255,255,.05); color:var(--text); }
+  .ov-table .mono { font-family:"Consolas",monospace; font-size:12px; direction:ltr; color:var(--muted); }
+  .ev-badge { display:inline-block; font-size:11px; font-weight:800; padding:3px 10px; border-radius:999px; direction:ltr; }
+  .t-green { background:rgba(52,211,153,.16); color:var(--green); }
+  .t-blue { background:rgba(91,140,255,.18); color:#8ab4ff; }
+  .t-amber { background:rgba(251,191,36,.16); color:var(--amber); }
+  .t-red { background:rgba(251,113,133,.16); color:var(--red); }
+  .t-indigo { background:rgba(139,92,246,.2); color:#c4b5fd; }
+  .pts-pos { color:var(--green); font-weight:800; direction:ltr; }
+  .pts-neg { color:var(--red); font-weight:800; direction:ltr; }
+  .live-dot { display:inline-flex; align-items:center; gap:7px; font-size:12px; color:var(--green); font-weight:700; }
+  .live-dot i { width:8px; height:8px; border-radius:50%; background:var(--green); box-shadow:0 0 10px var(--green); }
+
+  /* ---- extra modal building blocks (cards 02–06) ---- */
+  /* horizontal bars (country breakdown) */
+  .hbars { display:flex; flex-direction:column; gap:10px; }
+  .hbar { display:grid; grid-template-columns:124px 1fr 54px; align-items:center; gap:12px; }
+  .hbar .hb-l { font-size:13px; color:#cbd5e1; }
+  .hbar .hb-track { height:17px; border-radius:6px; background:rgba(255,255,255,.05); overflow:hidden; }
+  .hbar .hb-fill { height:100%; border-radius:6px; background:var(--grad-2); }
+  .hbar:nth-child(2) .hb-fill { background:var(--grad); }
+  .hbar:nth-child(3) .hb-fill { background:var(--grad-3); }
+  .hbar:nth-child(4) .hb-fill { background:var(--grad-warm); }
+  .hbar .hb-v { font-size:12.5px; font-weight:800; color:#fff; direction:ltr; text-align:left; }
+
+  /* health gauge */
+  .gauge-wrap { display:flex; flex-direction:column; align-items:center; justify-content:center; gap:10px; }
+  .gauge { position:relative; width:150px; height:150px; }
+  .gauge .gv { position:absolute; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:center; }
+  .gauge .gv b { font-size:30px; font-weight:900; color:#fff; line-height:1; }
+  .gauge .gv span { font-size:10px; text-transform:uppercase; letter-spacing:1px; color:var(--muted-2); margin-top:3px; }
+
+  /* config setting cards */
+  .cfg-grid { display:grid; grid-template-columns:repeat(3,1fr); gap:14px; margin-bottom:15px; }
+  .cfg-card { background:linear-gradient(180deg,var(--card),var(--card-2)); border:1px solid var(--border); border-radius:15px; padding:16px 18px; display:flex; flex-direction:column; gap:10px; }
+  .cfg-card .ct { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+  .cfg-card .ci { width:38px; height:38px; border-radius:11px; display:grid; place-items:center; font-size:17px; flex-shrink:0; }
+  .cfg-card h4 { font-size:14px; color:#fff; font-weight:700; }
+  .cfg-card .desc { font-size:11.5px; color:var(--muted); line-height:1.45; }
+  .cfg-card .cval { font-size:25px; font-weight:900; color:#fff; direction:ltr; }
+  .cfg-card .cval small { font-size:12px; font-weight:600; color:var(--muted-2); }
+  .toggle { width:46px; height:26px; border-radius:999px; background:var(--brand); position:relative; flex-shrink:0; }
+  .toggle i { position:absolute; top:3px; left:3px; width:20px; height:20px; border-radius:50%; background:#fff; }
+  .stepper { display:flex; align-items:center; gap:10px; }
+  .stepper .sbtn { width:34px; height:34px; border-radius:9px; border:1px solid var(--border); background:var(--card-3); color:#cbd5e1; display:grid; place-items:center; font-size:18px; }
+  .stepper .sbox { flex:1; text-align:center; background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:5px; font-size:22px; font-weight:800; color:#fff; }
+  .slider { height:6px; border-radius:999px; background:rgba(255,255,255,.12); position:relative; margin:16px 4px 6px; }
+  .slider .sf { position:absolute; top:0; bottom:0; left:0; border-radius:999px; background:var(--grad); }
+  .slider .sh { position:absolute; top:50%; width:16px; height:16px; border-radius:50%; background:#fff; transform:translate(-50%,-50%); box-shadow:var(--shadow-glow); }
+  .save-bar { display:flex; align-items:center; justify-content:space-between; gap:14px; background:var(--card-2); border:1px solid var(--border); border-radius:14px; padding:12px 18px; margin-bottom:15px; font-size:13px; }
+  .btn-sync { background:var(--grad); border:none; color:#fff; font-weight:800; font-size:13px; padding:9px 17px; border-radius:10px; cursor:default; }
+
+  /* simulator slider readouts */
+  .sim-params { display:grid; grid-template-columns:repeat(3,1fr); gap:18px; }
+  .sim-param .sp-top { display:flex; align-items:center; justify-content:space-between; font-size:12px; }
+  .sim-param .sp-top .lbl { color:var(--muted-2); text-transform:uppercase; letter-spacing:.5px; font-weight:700; }
+  .sim-param .sp-top .val { font-weight:800; color:#fff; direction:ltr; }
+  .sim-banner { margin-top:14px; border:1px solid rgba(52,211,153,.3); background:rgba(52,211,153,.1); color:#a7f3d0; border-radius:12px; padding:11px 15px; font-size:13px; }
+
+  /* playground panels */
+  .pg-grid { display:grid; grid-template-columns:repeat(2,1fr); gap:14px; }
+  .pg-card { background:linear-gradient(180deg,var(--card),var(--card-2)); border:1px solid var(--border); border-radius:15px; padding:16px 18px; }
+  .pg-card .pgt { display:flex; align-items:center; justify-content:space-between; gap:10px; margin-bottom:11px; }
+  .pg-card .pgt h4 { font-size:14.5px; }
+  .pg-input { display:block; width:100%; background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:8px 12px; font-size:12.5px; color:#cbd5e1; direction:ltr; font-family:"Consolas",monospace; margin-bottom:9px; }
+  .pg-run { display:inline-flex; align-items:center; gap:7px; background:var(--brand); border:none; color:#fff; font-weight:700; font-size:12.5px; padding:7px 14px; border-radius:9px; margin-bottom:10px; }
+  .json { direction:ltr; text-align:left; font-family:"Consolas",monospace; font-size:11.5px; line-height:1.6; background:rgba(52,211,153,.08); border:1px solid rgba(52,211,153,.25); border-radius:10px; padding:11px 13px; color:#a7f3d0; white-space:pre; overflow-x:auto; }
+
+  /* docs */
+  .arch { display:flex; align-items:stretch; justify-content:center; gap:5px; flex-wrap:wrap; direction:ltr; }
+  .arch-node { border:2px solid var(--border); border-radius:13px; padding:10px 12px; text-align:center; min-width:116px; }
+  .arch-node .an-i { font-size:21px; }
+  .arch-node .an-t { font-size:12.5px; font-weight:800; color:#fff; margin-top:3px; }
+  .arch-node .an-s { font-size:9.5px; color:var(--muted-2); margin-top:2px; }
+  .arch-arrow { display:flex; align-items:center; color:var(--brand); font-size:17px; font-weight:800; }
+  .cred-grid { display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .cred .cl { font-size:11px; color:var(--muted-2); margin-bottom:5px; }
+  .cred code { display:block; background:var(--bg); border:1px solid var(--border); border-radius:9px; padding:9px 12px; font-size:12.5px; }
+  .qsteps { display:grid; grid-template-columns:repeat(4,1fr); gap:11px; }
+  .qstep { display:flex; gap:10px; background:var(--card-2); border:1px solid var(--border); border-radius:12px; padding:12px; }
+  .qstep .qn { width:28px; height:28px; border-radius:50%; background:rgba(91,140,255,.18); color:#8ab4ff; font-weight:800; font-size:13px; display:grid; place-items:center; flex-shrink:0; }
+  .qstep b { font-size:13px; color:#fff; } .qstep p { font-size:11px; color:var(--muted); margin-top:2px; line-height:1.4; }
+
+  /* ============ Research two-pane ============ */
+  .research { display:grid; grid-template-columns:1fr 1fr; gap:20px; flex:1; min-height:0; }
+  .res-pane { display:flex; flex-direction:column; gap:11px; min-height:0; }
+  .res-pane > .pane-head { display:flex; align-items:center; gap:10px; margin-bottom:2px; }
+  .res-pane > .pane-head .ph-ico { width:38px; height:38px; border-radius:10px; display:grid; place-items:center; font-size:18px; }
+  .res-pane.a .pane-head .ph-ico { background: var(--grad-2); }
+  .res-pane.b .pane-head .ph-ico { background: var(--grad-warm); }
+  .res-pane .pane-head h3 { font-size:16.5px; }
+  .res-item { display:flex; align-items:flex-start; gap:11px; background: linear-gradient(180deg,var(--card),var(--card-2)); border:1px solid var(--border); border-radius:11px; padding:10px 13px; }
+  .res-item .ri { font-size:18px; flex-shrink:0; line-height:1.4; }
+  .res-item .rt { font-size:12.8px; line-height:1.45; color:var(--muted); }
+  .res-item .rt b { color:#fff; }
+</style>
+</head>
+<body>
+
+<div class="progress" id="progress"></div>
+<div class="dots" id="dots"></div>
+
+<div class="stage">
+ <div class="deck" id="deck">
+
+  <!-- ============ SLIDE 1 — Title & Vision ============ -->
+  <section class="slide active hero">
+    <div class="hero-badge">🚀</div>
+    <div class="eyebrow">פרויקט גמר · סמינר · 2026</div>
+    <h1>Virality <span class="grad-text">SDK</span></h1>
+    <p class="sub" style="max-width:720px;font-size:18px;">פלטפורמה מקצה-לקצה הכוללת <b>SDK לאנדרואיד</b>, <b>פורטל ניהול</b> ו<b>שרת Backend</b> —
+      שמאפשרת לכל אפליקציה לבנות תוכנית הזמנות (Referral) ולהפוך כל משתמש קיים ל<span class="highlight">מנוע לגיוס לקוחות חדשים</span>.</p>
+    <div class="vp">🎯 הערך המרכזי: <span class="grad-text">האצת גיוס לקוחות חדשים</span> דרך לולאות ויראליות</div>
+    <div class="hero-stats stagger">
+      <div class="card stat"><div class="num">3-in-1</div><div class="lbl">SDK · פורטל · שרת במערכת אחת אינטגרלית</div></div>
+      <div class="card stat"><div class="num">×K</div><div class="lbl">מקדם ויראלי שמכפיל את בסיס המשתמשים</div></div>
+      <div class="card stat"><div class="num">Multi-Tenant</div><div class="lbl">שרת אחד שמשרת אינסוף פרויקטים בבידוד מלא</div></div>
+    </div>
+    <div class="tri-tech">
+      <div class="tech-chip">🐍 Python · Flask</div>
+      <div class="tech-chip">⚛️ React · Vite</div>
+      <div class="tech-chip">🐘 PostgreSQL</div>
+      <div class="tech-chip">⚡ Redis</div>
+      <div class="tech-chip">📱 Android · Kotlin</div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 2 — Features ============ -->
+  <section class="slide slide-features">
+    <span class="slide-num">02 / 10</span>
+    <div class="slide-head">
+      <div class="eyebrow">📋 יכולות המערכת</div>
+      <h2>מה המערכת יודעת לעשות?</h2>
+      <p class="sub">הלב של המערכת הוא <span class="highlight">מנוע גיוס לקוחות חדשים</span> — כל יכולת נבנתה כדי להגדיל את בסיס המשתמשים ולהאיץ צמיחה.</p>
+    </div>
+    <div class="grid g3 fill stagger feat-grid">
+      <div class="card glow">
+        <div class="ico">🔗</div>
+        <h3>הזמנות ויראליות</h3>
+        <p>קוד הזמנה ייחודי + לינק שיתוף חכם ו-Deep-Link. <b>כל משתמש הופך לערוץ הפצה</b> שמביא לקוחות חדשים.</p>
+      </div>
+      <div class="card glow">
+        <div class="ico">📈</div>
+        <h3>מעקב המרה מלא</h3>
+        <p>מסע הלקוח מנוטר מקצה לקצה: <b>נוצר → נלחץ → הותקן → יוחס</b>. רואים בדיוק מאיפה מגיעה הצמיחה.</p>
+      </div>
+      <div class="card glow">
+        <div class="ico">🎁</div>
+        <h3>כלכלת תגמולים</h3>
+        <p>מערכת נקודות מנוהלת בשרת. <b>תגמול על כל הזמנה מוצלחת</b> שמתמרץ להזמין עוד ועוד חברים.</p>
+      </div>
+      <div class="card">
+        <div class="ico">📅</div>
+        <h3>בונוס כניסה יומי</h3>
+        <p>תגמול אוטומטי כל 24 שעות (נאכף בשרת) שמחזיר משתמשים לאפליקציה ומגדיל שימור ומעורבות.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🛡️</div>
+        <h3>הגנה מפני הונאה</h3>
+        <p>חסימת הזמנות עצמיות והתקנות מזויפות + הגבלת קצב — כדי שתקציב התגמולים יוקדש ללקוחות אמיתיים.</p>
+      </div>
+      <div class="card">
+        <div class="ico">🌍</div>
+        <h3>אנליטיקה גאוגרפית</h3>
+        <p>זיהוי מדינת מקור אוטומטי (Geo-IP) לכל משתמש — להבין מאיפה מגיעה הצמיחה ולמקד קמפיינים.</p>
+      </div>
+    </div>
+    <div class="apps-band">
+      <div class="ab-title">📲 לאילו סוגי אפליקציות ה-SDK מתאים?</div>
+      <div class="ab-row">
+        <span class="app-chip">🎮 <span>גיימינג ולויאליטי <small>בונוסים והזמנות</small></span></span>
+        <span class="app-chip">💹 <span>פינטק ומסחר <small>כמו Portfolio Pulse</small></span></span>
+        <span class="app-chip">🛒 <span>E-commerce <small>הזמן וקבל הנחה</small></span></span>
+        <span class="app-chip">📱 <span>SaaS ופרודוקטיביות <small>גדילת בסיס משתמשים</small></span></span>
+        <span class="app-chip">💬 <span>סושיאל ותוכן <small>הפצה ויראלית טבעית</small></span></span>
+        <span class="app-chip">🎬 <span>מדיה ומנויים <small>שיתוף לתגמול</small></span></span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 3 — Live Example (explanatory) ============ -->
+  <section class="slide">
+    <span class="slide-num">03 / 10</span>
+    <div class="slide-head">
+      <div class="eyebrow">💡 הסבר · דוגמה אמיתית מאפליקציית Portfolio Pulse</div>
+      <h2>חנות התגמולים — <span class="grad-text">לאן הולכות הנקודות</span></h2>
+      <p class="sub">משתמשים <b>צוברים נקודות מהזמנת חברים</b> (100 נק' לכל הזמנה) ומוציאים אותן על שדרוגים ופיצ'רים — מה שסוגר את לולאת הגיוס.</p>
+    </div>
+    <div class="research fill">
+      <div class="res-pane a">
+        <div class="pane-head"><div class="ph-ico">🎁</div><h3>חנות תגמולים — מה קונים</h3></div>
+        <div class="store-list stagger" style="gap:9px;">
+          <div class="store-row" style="padding:10px 14px;">
+            <div class="si" style="width:40px;height:40px;font-size:20px;">🚫</div>
+            <div class="info"><h4>Remove Ads</h4><p>הסרת כל הפרסומות</p></div>
+            <span class="owned">✅ נרכש</span>
+          </div>
+          <div class="store-row" style="padding:10px 14px;">
+            <div class="si" style="width:40px;height:40px;font-size:20px;">🎨</div>
+            <div class="info"><h4>Custom Themes</h4><p>ערכות צבעים ללוח המחוונים</p></div>
+            <span class="price">75 נק'</span>
+          </div>
+          <div class="store-row" style="padding:10px 14px;">
+            <div class="si" style="width:40px;height:40px;font-size:20px;">📄</div>
+            <div class="info"><h4>Deep-Dive Reports</h4><p>דוחות PDF ברמת אנליסט</p></div>
+            <span class="price">100 נק'</span>
+          </div>
+          <div class="store-row" style="padding:10px 14px;">
+            <div class="si" style="width:40px;height:40px;font-size:20px;">📈</div>
+            <div class="info"><h4>Advanced Charts</h4><p>אינדיקטורים וכלי שרטוט</p></div>
+            <span class="price">150 נק'</span>
+          </div>
+          <div class="store-row" style="padding:10px 14px;">
+            <div class="si" style="width:40px;height:40px;font-size:20px;">📡</div>
+            <div class="info"><h4>Sentiment Radar</h4><p>ניתוח סנטימנט מהרשת</p></div>
+            <span class="price">180 נק'</span>
+          </div>
+        </div>
+      </div>
+      <div class="res-pane b">
+        <div class="pane-head"><div class="ph-ico">🛒</div><h3>איך הרכישה עובדת</h3></div>
+        <div class="flow" style="flex-direction:column;gap:8px;align-items:stretch;">
+          <div class="flow-node" style="flex-direction:row;justify-content:flex-start;gap:12px;text-align:right;"><span class="fi">👆</span><div><div class="ft">לחיצה על פריט בחנות</div></div></div>
+          <div style="text-align:center;color:var(--brand);font-size:18px;">↓</div>
+          <div class="flow-node" style="flex-direction:row;justify-content:flex-start;gap:12px;text-align:right;"><span class="fi">⚙️</span><div><div class="ft">קריאה ל-SDK</div><div class="fc">claimReward(id, cost)</div></div></div>
+          <div style="text-align:center;color:var(--brand);font-size:18px;">↓</div>
+          <div class="flow-node ok" style="flex-direction:row;justify-content:flex-start;gap:12px;text-align:right;"><span class="fi">🎉</span><div><div class="ft">השרת מוריד מהיתרה → קונפטי</div><div class="fc">source of truth → "Owned"</div></div></div>
+        </div>
+        <div class="loop-banner" style="margin-top:auto;">
+          <span class="li">🔄</span>
+          <span><b>הלולאה שמביאה לקוחות:</b> הזמנה = 100 נק' ← פתיחת פרימיום ← <span class="highlight">מזמין עוד חברים</span>.</span>
+        </div>
+        <div class="note-row" style="font-size:12.5px;">
+          <span>🔒 <b>השרת = מקור האמת</b> — אי אפשר לזייף יתרה בצד הלקוח; חוסר נקודות מחזיר <code style="color:#fb7185;">InsufficientPoints</code>.</span>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 4 — Portal capabilities (explanatory) ============ -->
+  <section class="slide">
+    <span class="slide-num">04 / 10</span>
+    <div class="slide-head">
+      <div class="eyebrow">🖥️ הסבר · פורטל הניהול</div>
+      <h2>ששת המסכים של פורטל הניהול</h2>
+      <p class="sub">אפליקציית React שנותנת שליטה מלאה על תוכנית ההזמנות. <b>לכל מסך תפקיד אחד וברור</b> — מאנליטיקה בזמן אמת ועד שינוי כללי התגמול בלי לעדכן את האפליקציה.</p>
+    </div>
+    <div class="grid g3 fill stagger portal-feats">
+      <div class="card pcard clickable" data-modal="overview">
+        <div class="pcard-top"><div class="ico">📊</div><span class="pnum">01</span></div>
+        <h3>סקירה כללית <span class="tab">Overview</span></h3>
+        <p>לוח המחוונים הראשי: <b>סך הזמנות, משתמשים חדשים, מקדם ויראלי K</b>, משפך המרה ולוח מובילים — תמונת מצב מלאה במבט אחד.</p>
+        <span class="open-hint">🔍 לחץ לצפייה בנתונים המלאים</span>
+      </div>
+      <div class="card pcard clickable" data-modal="geo">
+        <div class="pcard-top"><div class="ico">🌐</div><span class="pnum">02</span></div>
+        <h3>דמוגרפיה ויציבות <span class="tab">Demographics</span></h3>
+        <p><b>מאיפה מגיעים המשתמשים</b>: פילוח לפי מדינה, ציון בריאות ה-SDK וציר זמן של שגיאות וחסימות.</p>
+        <span class="open-hint">🔍 לחץ לצפייה בנתונים המלאים</span>
+      </div>
+      <div class="card pcard clickable" data-modal="config">
+        <div class="pcard-top"><div class="ico">⚙️</div><span class="pnum">03</span></div>
+        <h3>ניהול קמפיינים <span class="tab">Remote Config</span></h3>
+        <p>שליטה מרחוק: <b>שינוי גובה התגמול בזמן אמת</b> — בלי להוציא גרסה חדשה של האפליקציה לחנות.</p>
+        <span class="open-hint">🔍 לחץ לצפייה בנתונים המלאים</span>
+      </div>
+      <div class="card pcard clickable" data-modal="sim">
+        <div class="pcard-top"><div class="ico">🧮</div><span class="pnum">04</span></div>
+        <h3>סימולטור צמיחה <span class="tab">Simulator</span></h3>
+        <p>מחשבון ויראלי שמדמה את <b>עקומת הצמיחה לפי מקדם K</b> — לתכנן את אסטרטגיית הגיוס עוד לפני ההשקה.</p>
+        <span class="open-hint">🔍 לחץ לצפייה בנתונים המלאים</span>
+      </div>
+      <div class="card pcard clickable" data-modal="playground">
+        <div class="pcard-top"><div class="ico">🧪</div><span class="pnum">05</span></div>
+        <h3>מגרש משחקים <span class="tab">Playground</span></h3>
+        <p>בדיקת כל פונקציות ה-SDK חי מול השרת — <b>רואים בקשה גולמית ותגובת JSON</b>, בלי לכתוב שורת קוד.</p>
+        <span class="open-hint">🔍 לחץ לצפייה בנתונים המלאים</span>
+      </div>
+      <div class="card pcard clickable" data-modal="docs">
+        <div class="pcard-top"><div class="ico">📚</div><span class="pnum">06</span></div>
+        <h3>מדריך אינטגרציה <span class="tab">Docs</span></h3>
+        <p>תיעוד Self-Service: <b>דיאגרמת ארכיטקטורה ודוגמאות קוד מוכנות להעתקה</b> (Python ו-JavaScript).</p>
+        <span class="open-hint">🔍 לחץ לצפייה בנתונים המלאים</span>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 5 — Portal Wireframe (design) ============ -->
+  <section class="slide">
+    <span class="slide-num">05 / 10</span>
+    <div class="slide-head">
+      <div class="eyebrow">🎨 עיצוב · סכמת UI של הפורטל</div>
+      <h2>שרטוט מבנה הפורטל</h2>
+      <p class="sub">פריסה נקייה ומסודרת: כותרת עליונה עם סטטוס חיבור, סרגל ניווט צדדי, ואזור נתונים מרכזי עם כרטיסי מדדים וגרפים.</p>
+    </div>
+    <div class="fill" style="display:flex;">
+      <div class="portal-wire">
+        <div class="wire-header">
+          <div style="width:32px;height:32px;border-radius:9px;background:var(--grad);"></div>
+          <div style="width:130px;height:13px;border-radius:6px;background:rgba(255,255,255,.14);"></div>
+          <div style="margin-right:auto;display:flex;gap:9px;align-items:center;">
+            <div class="dot-live"></div><span class="tag">API מחובר</span>
+          </div>
+        </div>
+        <div class="wire-sidebar">
+          <div style="width:96px;height:13px;border-radius:6px;background:var(--grad);margin-bottom:6px;"></div>
+          <div class="wire-nav on">📊 סקירה כללית</div>
+          <div class="wire-nav">🌐 דמוגרפיה</div>
+          <div class="wire-nav">⚙️ קמפיינים</div>
+          <div class="wire-nav">🧮 סימולטור</div>
+          <div class="wire-nav">🧪 מגרש משחקים</div>
+          <div class="wire-nav">📚 מדריך</div>
+        </div>
+        <div class="wire-main">
+          <div class="wire-stats">
+            <div class="wire-stat"><span class="b1"></span><span class="b2"></span></div>
+            <div class="wire-stat"><span class="b1"></span><span class="b2"></span></div>
+            <div class="wire-stat"><span class="b1"></span><span class="b2"></span></div>
+            <div class="wire-stat"><span class="b1"></span><span class="b2"></span></div>
+          </div>
+          <div class="wire-charts">
+            <div class="wire-chart">
+              <span class="tag">📊 משפך המרה</span>
+              <div class="wire-bars"><span style="height:92%"></span><span style="height:72%"></span><span style="height:50%"></span><span style="height:33%"></span><span style="height:64%"></span></div>
+            </div>
+            <div class="wire-chart">
+              <span class="tag">📋 לוח מובילים</span>
+              <div class="wire-rows"><div class="r"></div><div class="r"></div><div class="r"></div><div class="r"></div><div class="r"></div></div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 6 — SDK Wireframe (design) ============ -->
+  <section class="slide">
+    <span class="slide-num">06 / 10</span>
+    <div class="slide-head">
+      <div class="eyebrow">🎨 עיצוב · סכמת UI של ה-SDK</div>
+      <h2>הרכיב הויזואלי בתוך האפליקציה</h2>
+      <p class="sub">חלון הזמנה (Bottom Sheet) שעולה מתחתית המסך — הממשק שדרכו <b>משתמש קיים מזמין חברים חדשים</b> בלחיצה אחת.</p>
+    </div>
+    <div class="phone-wrap fill">
+      <div class="phone">
+        <div class="notch"></div>
+        <div class="phone-app">
+          <div class="ph-bar">
+            <div class="ph-avatar"></div>
+            <div style="flex:1;margin-inline-start:10px;"><div class="ph-line w60" style="margin-bottom:6px;"></div><div class="ph-line w40"></div></div>
+          </div>
+          <div class="ph-line w80"></div>
+          <div class="ph-line"></div>
+          <div class="ph-line w60"></div>
+          <div class="sheet">
+            <div class="sheet-handle"></div>
+            <div class="gift">🎁</div>
+            <h4>הזמן חבר — שניכם מרוויחים 100 נקודות</h4>
+            <div class="code-box">
+              <span class="c">ABC12345</span>
+              <span class="cp">📋 העתק קוד</span>
+            </div>
+            <button class="btn-share">שתף את ההזמנה ✦</button>
+          </div>
+        </div>
+      </div>
+      <div class="phone-notes stagger">
+        <div class="card glow">
+          <div class="ico">🎯</div>
+          <h3>נקודת הגיוס המרכזית</h3>
+          <p>החלון הזה הוא <b>המנוע הויראלי</b> של המערכת: כל שיתוף ממנו יכול להביא לקוח חדש ולהפעיל את לולאת הצמיחה.</p>
+        </div>
+        <div class="card">
+          <div class="ico">⚡</div>
+          <h3>חוויה ללא חיכוך</h3>
+          <p>קוד אישי מובלט, כפתור שיתוף יחיד ותגמול דו-צדדי ברור — <b>מינימום שלבים, מקסימום המרות</b>.</p>
+        </div>
+        <div class="card">
+          <div class="ico">🔌</div>
+          <h3>אינטגרציה בשעות</h3>
+          <p>המפתח מוסיף את הרכיב בכמה שורות קוד — כל הלוגיקה והעיצוב מגיעים מוכנים מתוך ה-SDK.</p>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 7 — Android SDK (technical) ============ -->
+  <section class="slide api-compact">
+    <span class="slide-num">07 / 10</span>
+    <div class="slide-head">
+      <div class="eyebrow">📱 טכני · ה-SDK לאנדרואיד</div>
+      <h2>הספרייה — מה המפתח רואה, ומה מוסתר</h2>
+      <p class="sub">הפרדה ארכיטקטונית ברורה בין ה-API הציבורי שהמפתח קורא לו, לבין הלוגיקה הפנימית שעובדת מאחורי הקלעים.</p>
+    </div>
+    <div class="two-col">
+      <div class="col-box pub-box">
+        <div class="box-title">
+          <div class="ico">🟢</div>
+          <div><h3>API ציבורי</h3><span class="pill pub">נחשף למפתח האפליקציה</span></div>
+        </div>
+        <div class="api-list">
+          <div class="api-item"><span class="fn">init()</span><span class="desc">אתחול ה-SDK פעם אחת ב-Application</span></div>
+          <div class="api-item"><span class="fn">setUserId()</span><span class="desc">קישור המשתמש המחובר ל-SDK</span></div>
+          <div class="api-item"><span class="fn">generateInvite()</span><span class="desc">יוצר/שולף קוד הזמנה ולינק שיתוף</span></div>
+          <div class="api-item"><span class="fn">handleDeepLink()</span><span class="desc">חילוץ קוד מלינק נכנס + ייחוס המרה</span></div>
+          <div class="api-item"><span class="fn">trackEvent()</span><span class="desc">מדווח על שלב במשפך ההמרה</span></div>
+          <div class="api-item"><span class="fn">getBalance()</span><span class="desc">שולף את יתרת הנקודות של המשתמש</span></div>
+          <div class="api-item"><span class="fn">claimReward()</span><span class="desc">מימוש נקודות בתמורה לתגמול</span></div>
+          <div class="api-item"><span class="fn">claimDailyBonus()</span><span class="desc">מזכה בבונוס הכניסה היומי</span></div>
+          <div class="api-item"><span class="fn">getConfig()</span><span class="desc">מושך הגדרות תגמול עדכניות מהשרת</span></div>
+        </div>
+      </div>
+      <div class="col-box int-box">
+        <div class="box-title">
+          <div class="ico">🟣</div>
+          <div><h3>פונקציות פנימיות</h3><span class="pill int">מוסתר — לוגיקה פנימית</span></div>
+        </div>
+        <div class="api-list">
+          <div class="api-item"><span class="fn">_generateCode()</span><span class="desc">קוד ייחודי גלובלי באורך 8 תווים</span></div>
+          <div class="api-item"><span class="fn">_getOrCreateUser()</span><span class="desc">שליפה אטומית או יצירת משתמש</span></div>
+          <div class="api-item"><span class="fn">requireCredentials</span><span class="desc">אימות מפתח API לכל בקשה</span></div>
+          <div class="api-item"><span class="fn">rateLimit</span><span class="desc">הגבלת קצב (Sliding Window) נגד הונאה</span></div>
+          <div class="api-item"><span class="fn">_resolveGeoIp()</span><span class="desc">זיהוי מדינה לפי כתובת IP</span></div>
+          <div class="api-item"><span class="fn">_eventQueue</span><span class="desc">תור מקומי לאירועים במצב Offline</span></div>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 8 — Server (technical) ============ -->
+  <section class="slide">
+    <span class="slide-num">08 / 10</span>
+    <div class="slide-head">
+      <div class="eyebrow">🛰️ טכני · השרת (Backend)</div>
+      <h2>הלוגיקה העסקית וממשק ה-API</h2>
+      <p class="sub">שרת Flask שמרכז את כל החוקים: יצירת הזמנות, ייחוס המרות, זיכוי נקודות ואכיפת הגנות — מאובטח במפתח API לכל בקשה.</p>
+    </div>
+    <div class="two-col">
+      <div class="col-box pub-box">
+        <div class="box-title">
+          <div class="ico">🔗</div>
+          <div><h3>נקודות קצה — הזמנות</h3><span class="pill pub">מנוע הגיוס</span></div>
+        </div>
+        <div class="api-list">
+          <div class="ep"><span class="method post">POST</span><span class="path">/referral/generate</span><span class="lbl">יצירת קוד</span></div>
+          <div class="ep"><span class="method get">GET</span><span class="path">/i/&lt;code&gt;</span><span class="lbl">דף נחיתה · תיעוד קליק</span></div>
+          <div class="ep"><span class="method post">POST</span><span class="path">/referral/track</span><span class="lbl">ייחוס + זיכוי נקודות</span></div>
+          <div class="ep"><span class="method get">GET</span><span class="path">/referral/balance</span><span class="lbl">יתרה (מטמון)</span></div>
+          <div class="ep"><span class="method get">GET</span><span class="path">/referral/config</span><span class="lbl">הגדרות תגמול</span></div>
+          <div class="ep"><span class="method post">POST</span><span class="path">/referral/claim</span><span class="lbl">מימוש תגמול</span></div>
+          <div class="ep"><span class="method post">POST</span><span class="path">/referral/daily-bonus</span><span class="lbl">בונוס יומי</span></div>
+        </div>
+      </div>
+      <div class="col-box int-box">
+        <div class="box-title">
+          <div class="ico">📊</div>
+          <div><h3>נקודות קצה — ניהול</h3><span class="pill int">פורטל</span></div>
+        </div>
+        <div class="api-list">
+          <div class="ep"><span class="method get">GET</span><span class="path">/admin/overview</span><span class="lbl">נתוני KPI</span></div>
+          <div class="ep"><span class="method get">GET</span><span class="path">/admin/demographics</span><span class="lbl">פילוח מדינות</span></div>
+          <div class="ep"><span class="method get">GET</span><span class="path">/admin/leaderboard</span><span class="lbl">מובילי הזמנות</span></div>
+          <div class="ep"><span class="method get">GET</span><span class="path">/admin/config</span><span class="lbl">הגדרות נוכחיות</span></div>
+          <div class="ep"><span class="method put">PUT</span><span class="path">/admin/config</span><span class="lbl">עדכון תגמולים</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="note-row" style="margin-top:16px;">
+      <b style="color:#fff;">🔐 אבטחה:</b>
+      <span>כל בקשה נדרשת לכותרות <code style="color:#8ab4ff;">x-api-key</code> + <code style="color:#8ab4ff;">x-project-id</code> — אימות חסר/שגוי מוחזר כ-401/403.</span>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 9 — Architecture & DB (technical) ============ -->
+  <section class="slide">
+    <span class="slide-num">09 / 10</span>
+    <div class="slide-head">
+      <div class="eyebrow">🏗️ טכני · ארכיטקטורת השרת ומסד הנתונים</div>
+      <h2>אחסון יעיל ושליפה מהירה — וגם <span class="grad-text">למה כך</span></h2>
+      <p class="sub">שילוב מנצח: <b>PostgreSQL</b> לנתונים קבועים ואמינים, ו-<b>Redis</b> לנתונים זמניים ומהירים — מהירות מקסימלית בכל קריאה.</p>
+    </div>
+    <div class="grid g3" style="margin-bottom:16px;">
+      <div class="db-table">
+        <div class="t-head">📁 projects</div>
+        <div class="t-body">
+          <div class="row"><span class="k db-key">project_id 🔑</span><span class="ty">unique idx</span></div>
+          <div class="row"><span class="k db-key">api_key 🔑</span><span class="ty">unique idx</span></div>
+          <div class="row"><span class="k">points_per_referral</span><span class="ty">int</span></div>
+          <div class="row"><span class="k">rate_limit_per_min</span><span class="ty">int</span></div>
+        </div>
+      </div>
+      <div class="db-table">
+        <div class="t-head">👤 users</div>
+        <div class="t-body">
+          <div class="row"><span class="k db-key">user_id 📇</span><span class="ty">index</span></div>
+          <div class="row"><span class="k">points_balance</span><span class="ty">int</span></div>
+          <div class="row"><span class="k db-key">invite_code</span><span class="ty">unique</span></div>
+          <div class="row"><span class="k">referred_by</span><span class="ty">str</span></div>
+        </div>
+      </div>
+      <div class="db-table">
+        <div class="t-head">📜 referral_events</div>
+        <div class="t-body">
+          <div class="row"><span class="k db-key">event_type 📇</span><span class="ty">index</span></div>
+          <div class="row"><span class="k db-key">invite_code</span><span class="ty">index</span></div>
+          <div class="row"><span class="k db-key">country</span><span class="ty">index</span></div>
+          <div class="row"><span class="k">points_delta</span><span class="ty">int</span></div>
+        </div>
+      </div>
+    </div>
+    <div class="grid g2 fill">
+      <div class="card">
+        <h3>🐘 למה PostgreSQL לנתונים קבועים?</h3>
+        <ul class="feat" style="margin-top:4px;">
+          <li><b>שלמות נתונים (ACID)</b> — זיכוי נקודות ורישום אירוע באותה עסקה; אי-אפשר לזכות בלי תיעוד.</li>
+          <li><b>אינדקסים בנתיבים החמים</b> — שליפת משתמש או קוד הזמנה ב-O(log n) על כל קריאה.</li>
+          <li><b>לוג אירועים Append-Only</b> — כל אירוע נרשם פעם אחת ולעולם לא משתנה ⇐ ביקורת מלאה וחישוב מחדש של כל מדד.</li>
+        </ul>
+        <div class="db-ex">
+          <div class="exh">💾 דוגמה — נשמר לצמיתות (מקור האמת):</div>
+<pre class="exc"><span class="kk">users</span>   → points_balance=<span class="vv">350</span>, invite_code=<span class="vv">"ABC12345"</span>
+<span class="kk">events</span>  → event_type=<span class="vv">"attributed"</span>, points_delta=<span class="vv">+100</span>
+<span class="kk">users</span>   → last_daily_claim_at=<span class="vv">2026-06-12T08:01Z</span></pre>
+        </div>
+      </div>
+      <div class="card glow">
+        <h3>⚡ למה Redis לנתונים זמניים?</h3>
+        <ul class="feat" style="margin-top:4px;">
+          <li><b>תשובה ב-1ms</b> — מטמון יתרה (TTL 15ש') במקום סיבוב מלא ל-DB (~5ms). קריטי באלפי קריאות בשנייה.</li>
+          <li><b>מונה אטומי</b> — הגבלת קצב נגד הונאה דרך <code style="color:#fcd34d;">INCR + EXPIRE</code> טבעי ומהיר.</li>
+          <li><b>עמידות לתקלות</b> — אם Redis נופל, השרת חוזר אוטומטית ל-PostgreSQL בלי לחסום תנועה חיה.</li>
+        </ul>
+        <div class="db-ex">
+          <div class="exh">⚡ דוגמה — זמני, נמחק לבד עם TTL:</div>
+<pre class="exc"><span class="kk">balance:</span>proj:user_42     → <span class="vv">350</span>    <span class="tt">TTL 15s</span>
+<span class="kk">ratelimit:</span>proj:track:ip → <span class="vv">7</span>      <span class="tt">TTL 60s</span>
+<span class="kk">geoip:</span>88.12.x.91        → <span class="vv">"IL"</span>   <span class="tt">TTL 24h</span></pre>
+        </div>
+      </div>
+    </div>
+  </section>
+
+  <!-- ============ SLIDE 10 — Thank You ============ -->
+  <section class="slide hero">
+    <span class="slide-num">10 / 10</span>
+    <div class="hero-badge">🙏</div>
+    <h1>תודה</h1>
+  </section>
+
+ </div>
+</div>
+
+<!-- ============ Overview Modal — opens from slide 4, card 01 ============ -->
+<div class="modal-overlay" id="modal-overview" role="dialog" aria-modal="true" aria-label="סקירה כללית">
+  <div class="modal-panel">
+    <button class="modal-close" data-close title="סגור (Esc)">✕</button>
+    <div class="modal-head">
+      <div class="eyebrow">📊 פורטל · מסך 01 — Overview</div>
+      <h2>סקירה כללית — <span class="grad-text">כל הנתונים</span></h2>
+      <p class="sub">מדדי ויראליות בזמן אמת על פני כל תוכנית ההזמנות.</p>
+    </div>
+
+    <!-- KPI cards -->
+    <div class="ov-stats">
+      <div class="ov-stat">
+        <div class="top"><div class="si">🔗</div><span class="delta">▲ 12.4%</span></div>
+        <div class="v">2,847</div>
+        <div class="l">סך הזמנות (Total Referrals)</div>
+      </div>
+      <div class="ov-stat">
+        <div class="top"><div class="si sky">👥</div><span class="delta">▲ 8.1%</span></div>
+        <div class="v">18,392</div>
+        <div class="l">סך משתמשים (Total Users)</div>
+      </div>
+      <div class="ov-stat">
+        <div class="top"><div class="si em">🌿</div><span class="delta">▲ 15.7%</span></div>
+        <div class="v">6,210</div>
+        <div class="l">משתמשים שהוזמנו (Referred)</div>
+      </div>
+      <div class="ov-stat">
+        <div class="top"><div class="si am">📈</div><span class="delta">▲ 0.08</span></div>
+        <div class="v">1.34</div>
+        <div class="l">מקדם ויראלי K (K-Factor)</div>
+      </div>
+    </div>
+
+    <!-- Funnel + Trend -->
+    <div class="ov-grid">
+      <div class="ov-card">
+        <div class="ov-title"><h3>📊 משפך המרה</h3><span class="ev-badge t-green">31.8% מקצה לקצה</span></div>
+        <div class="funnel-bars">
+          <div class="fb"><span class="fv">4,120</span><div class="bar" style="height:96%"></div><span class="fs">נוצר<br>Generated</span></div>
+          <div class="fb"><span class="fv">3,540</span><div class="bar" style="height:83%"></div><span class="fs">נלחץ<br>Clicked</span></div>
+          <div class="fb"><span class="fv">1,980</span><div class="bar" style="height:46%"></div><span class="fs">הותקן<br>Installed</span></div>
+          <div class="fb"><span class="fv">1,310</span><div class="bar" style="height:31%"></div><span class="fs">יוחס<br>Attributed</span></div>
+        </div>
+      </div>
+      <div class="ov-card">
+        <div class="ov-title"><h3>📈 מגמת הזמנות</h3><span class="ev-badge t-indigo">30 ימים</span></div>
+        <svg viewBox="0 0 300 110" preserveAspectRatio="none" style="width:100%;height:172px;display:block;">
+          <defs><linearGradient id="spark" x1="0" y1="0" x2="0" y2="1">
+            <stop offset="0%" stop-color="#6366f1" stop-opacity=".55"/>
+            <stop offset="100%" stop-color="#6366f1" stop-opacity="0"/>
+          </linearGradient></defs>
+          <path d="M0,86 L43,78 L86,82 L129,60 L172,64 L215,44 L258,30 L300,16 L300,110 L0,110 Z" fill="url(#spark)"/>
+          <path d="M0,86 L43,78 L86,82 L129,60 L172,64 L215,44 L258,30 L300,16" fill="none" stroke="#818cf8" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+        </svg>
+      </div>
+    </div>
+
+    <!-- Live activity feed -->
+    <div class="ov-card">
+      <div class="ov-title"><h3>⚡ פיד פעילות חי</h3><span class="live-dot"><i></i> Live</span></div>
+      <table class="ov-table">
+        <thead><tr><th>אירוע</th><th>משתמש</th><th>קוד</th><th>מדינה</th><th>נקודות</th><th class="r">מתי</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ev-badge t-green">attributed</span></td><td class="mono">user_8f2a</td><td class="mono">ABC12345</td><td>🇮🇱 Israel</td><td class="pts-pos">+100</td><td class="r mono">2m ago</td></tr>
+          <tr><td><span class="ev-badge t-green">install</span></td><td class="mono">user_2k9p</td><td class="mono">XY83KLMN</td><td>🇺🇸 USA</td><td class="mono">—</td><td class="r mono">5m ago</td></tr>
+          <tr><td><span class="ev-badge t-amber">claim</span></td><td class="mono">user_5t1r</td><td class="mono">QW71ZZ02</td><td>🇩🇪 Germany</td><td class="pts-neg">−150</td><td class="r mono">11m ago</td></tr>
+          <tr><td><span class="ev-badge t-green">daily_bonus</span></td><td class="mono">user_9b3c</td><td class="mono">—</td><td>🇬🇧 UK</td><td class="pts-pos">+20</td><td class="r mono">18m ago</td></tr>
+          <tr><td><span class="ev-badge t-blue">click</span></td><td class="mono">user_3v8e</td><td class="mono">PP21AAZ1</td><td>🇧🇷 Brazil</td><td class="mono">—</td><td class="r mono">21m ago</td></tr>
+          <tr><td><span class="ev-badge t-red">blocked</span></td><td class="mono">user_0x7q</td><td class="mono">SELF1111</td><td>🇫🇷 France</td><td class="mono">—</td><td class="r mono">24m ago</td></tr>
+        </tbody>
+      </table>
+    </div>
+
+    <!-- Leaderboard -->
+    <div class="ov-card" style="margin-bottom:0;">
+      <div class="ov-title"><h3>🏆 מובילי הזמנות</h3><span class="ev-badge t-amber">Top Referrers</span></div>
+      <table class="ov-table">
+        <thead><tr><th>דירוג</th><th>משתמש</th><th>קוד הזמנה</th><th>מדינה</th><th class="r">הזמנות</th><th class="r">נקודות</th></tr></thead>
+        <tbody>
+          <tr><td style="font-size:17px;">🥇</td><td class="mono">user_8f2a</td><td class="mono" style="color:#8ab4ff;">ABC12345</td><td>🇮🇱 Israel</td><td class="r" style="color:#8ab4ff;font-weight:800;">48</td><td class="r pts-pos">+4,800</td></tr>
+          <tr><td style="font-size:17px;">🥈</td><td class="mono">user_2k9p</td><td class="mono" style="color:#8ab4ff;">XY83KLMN</td><td>🇺🇸 USA</td><td class="r" style="color:#8ab4ff;font-weight:800;">37</td><td class="r pts-pos">+3,700</td></tr>
+          <tr><td style="font-size:17px;">🥉</td><td class="mono">user_5t1r</td><td class="mono" style="color:#8ab4ff;">QW71ZZ02</td><td>🇩🇪 Germany</td><td class="r" style="color:#8ab4ff;font-weight:800;">29</td><td class="r pts-pos">+2,900</td></tr>
+          <tr><td class="mono">#4</td><td class="mono">user_9b3c</td><td class="mono" style="color:#8ab4ff;">LM55QO9T</td><td>🇬🇧 UK</td><td class="r" style="color:#8ab4ff;font-weight:800;">21</td><td class="r pts-pos">+2,100</td></tr>
+          <tr><td class="mono">#5</td><td class="mono">user_3v8e</td><td class="mono" style="color:#8ab4ff;">PP21AAZ1</td><td>🇧🇷 Brazil</td><td class="r" style="color:#8ab4ff;font-weight:800;">18</td><td class="r pts-pos">+1,800</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Modal 02 — Demographics & Stability ============ -->
+<div class="modal-overlay" id="modal-geo" role="dialog" aria-modal="true" aria-label="דמוגרפיה ויציבות">
+  <div class="modal-panel">
+    <button class="modal-close" data-close title="סגור (Esc)">✕</button>
+    <div class="modal-head">
+      <div class="eyebrow">🌐 פורטל · מסך 02 — Demographics & Stability</div>
+      <h2>דמוגרפיה ויציבות — <span class="grad-text">כל הנתונים</span></h2>
+      <p class="sub">פילוח Geo-IP, בריאות ה-SDK ואכיפת הגנה מפני הונאה.</p>
+    </div>
+    <div class="ov-grid">
+      <div class="ov-card">
+        <div class="ov-title"><h3>🌍 פילוח לפי מדינה</h3><span class="ev-badge t-blue">Geo-IP</span></div>
+        <div class="hbars">
+          <div class="hbar"><span class="hb-l">🇮🇱 Israel</span><div class="hb-track"><div class="hb-fill" style="width:100%"></div></div><span class="hb-v">5,420</span></div>
+          <div class="hbar"><span class="hb-l">🇺🇸 USA</span><div class="hb-track"><div class="hb-fill" style="width:78%"></div></div><span class="hb-v">4,210</span></div>
+          <div class="hbar"><span class="hb-l">🇩🇪 Germany</span><div class="hb-track"><div class="hb-fill" style="width:52%"></div></div><span class="hb-v">2,830</span></div>
+          <div class="hbar"><span class="hb-l">🇬🇧 UK</span><div class="hb-track"><div class="hb-fill" style="width:39%"></div></div><span class="hb-v">2,090</span></div>
+          <div class="hbar"><span class="hb-l">🇧🇷 Brazil</span><div class="hb-track"><div class="hb-fill" style="width:28%"></div></div><span class="hb-v">1,500</span></div>
+          <div class="hbar"><span class="hb-l">🇮🇳 India</span><div class="hb-track"><div class="hb-fill" style="width:21%"></div></div><span class="hb-v">1,140</span></div>
+        </div>
+      </div>
+      <div class="ov-card">
+        <div class="ov-title"><h3>🛡️ ציון בריאות SDK</h3><span class="ev-badge t-green">Healthy</span></div>
+        <div class="gauge-wrap">
+          <div class="gauge">
+            <svg width="150" height="150" style="transform:rotate(-90deg);">
+              <circle cx="75" cy="75" r="60" stroke="rgba(255,255,255,.08)" stroke-width="12" fill="none"/>
+              <circle cx="75" cy="75" r="60" stroke="#34d399" stroke-width="12" fill="none" stroke-linecap="round" stroke-dasharray="377" stroke-dashoffset="3"/>
+            </svg>
+            <div class="gv"><b>99.2%</b><span>Stability</span></div>
+          </div>
+          <p style="font-size:11.5px;color:var(--muted-2);text-align:center;max-width:210px;">מחושב מבקשות חסומות, Timeouts ושגיאות Runtime על פני כל ה-Sessions.</p>
+        </div>
+      </div>
+    </div>
+    <div class="ov-card">
+      <div class="ov-title"><h3>📉 ציר זמן שגיאות וקריסות</h3><span class="ev-badge t-amber">14 ימים אחרונים</span></div>
+      <svg viewBox="0 0 300 90" preserveAspectRatio="none" style="width:100%;height:140px;display:block;">
+        <defs>
+          <linearGradient id="blkg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f59e0b" stop-opacity=".4"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/></linearGradient>
+          <linearGradient id="errg" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f43f5e" stop-opacity=".5"/><stop offset="100%" stop-color="#f43f5e" stop-opacity="0"/></linearGradient>
+        </defs>
+        <path d="M0,70 L37,64 L75,72 L112,55 L150,66 L187,48 L225,58 L262,40 L300,52 L300,90 L0,90 Z" fill="url(#blkg)"/>
+        <path d="M0,70 L37,64 L75,72 L112,55 L150,66 L187,48 L225,58 L262,40 L300,52" fill="none" stroke="#f59e0b" stroke-width="2" vector-effect="non-scaling-stroke"/>
+        <path d="M0,82 L37,80 L75,84 L112,76 L150,82 L187,72 L225,80 L262,70 L300,78 L300,90 L0,90 Z" fill="url(#errg)"/>
+        <path d="M0,82 L37,80 L75,84 L112,76 L150,82 L187,72 L225,80 L262,70 L300,78" fill="none" stroke="#f43f5e" stroke-width="2" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div style="display:flex;gap:18px;margin-top:8px;font-size:11.5px;color:var(--muted);">
+        <span><span style="color:#f43f5e;">●</span> Errors</span>
+        <span><span style="color:#f59e0b;">●</span> Blocked</span>
+      </div>
+    </div>
+    <div class="ov-card" style="margin-bottom:0;">
+      <div class="ov-title"><h3>🚫 לוג הגנה מפני הונאה</h3><span class="ev-badge t-red">12 חסומים</span></div>
+      <table class="ov-table">
+        <thead><tr><th>כתובת IP</th><th>משתמש</th><th>קוד</th><th>מדינה</th><th>סיבה</th><th class="r">מתי</th></tr></thead>
+        <tbody>
+          <tr><td class="mono" style="color:#fb7185;">102.88.x.14</td><td class="mono">user_7d2</td><td class="mono">SELF1111</td><td>🇫🇷 France</td><td><span class="ev-badge t-red">rate_limit</span></td><td class="r mono">3m ago</td></tr>
+          <tr><td class="mono" style="color:#fb7185;">88.12.x.91</td><td class="mono">user_0xq</td><td class="mono">ABC12345</td><td>🇮🇱 Israel</td><td><span class="ev-badge t-red">rate_limit</span></td><td class="r mono">9m ago</td></tr>
+          <tr><td class="mono" style="color:#fb7185;">45.9.x.203</td><td class="mono">—</td><td class="mono">XY83KLMN</td><td>🇺🇸 USA</td><td><span class="ev-badge t-red">rate_limit</span></td><td class="r mono">22m ago</td></tr>
+          <tr><td class="mono" style="color:#fb7185;">77.3.x.58</td><td class="mono">user_5kp</td><td class="mono">SELF2222</td><td>🇩🇪 Germany</td><td><span class="ev-badge t-red">rate_limit</span></td><td class="r mono">41m ago</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Modal 03 — Remote Rules & Campaign Manager ============ -->
+<div class="modal-overlay" id="modal-config" role="dialog" aria-modal="true" aria-label="ניהול קמפיינים">
+  <div class="modal-panel">
+    <button class="modal-close" data-close title="סגור (Esc)">✕</button>
+    <div class="modal-head">
+      <div class="eyebrow">⚙️ פורטל · מסך 03 — Remote Rules & Campaign Manager</div>
+      <h2>ניהול קמפיינים — <span class="grad-text">כל ההגדרות</span></h2>
+      <p class="sub">שינויים מסתנכרנים מיידית לכל מופע SDK דרך PostgreSQL — בלי עדכון אפליקציה.</p>
+    </div>
+    <div class="cfg-grid">
+      <div class="cfg-card">
+        <div class="ct"><div style="display:flex;align-items:center;gap:10px;"><div class="ci" style="background:rgba(52,211,153,.16);">🛡️</div><div><h4>זיהוי הונאה</h4><div class="desc">Rate-limit מבוסס Redis</div></div></div><div class="toggle"><i></i></div></div>
+        <div class="cval" style="font-size:16px;color:var(--green);">● Enabled</div>
+      </div>
+      <div class="cfg-card">
+        <div class="ct"><div style="display:flex;align-items:center;gap:10px;"><div class="ci" style="background:rgba(91,140,255,.16);">✨</div><h4>נקודות להזמנה</h4></div></div>
+        <div class="desc">תגמול שמזוכה על ייחוס מוצלח.</div>
+        <div class="stepper"><div class="sbtn">−</div><div class="sbox">100</div><div class="sbtn">+</div></div>
+      </div>
+      <div class="cfg-card">
+        <div class="ct"><div style="display:flex;align-items:center;gap:10px;"><div class="ci" style="background:rgba(251,191,36,.16);">⏱️</div><h4>הגבלת קצב</h4></div><div class="cval" style="font-size:18px;">10<small> req/min</small></div></div>
+        <div class="desc">מקס' בקשות לדקה לכל IP.</div>
+        <div class="slider"><div class="sf" style="width:17%"></div><div class="sh" style="left:17%"></div></div>
+      </div>
+      <div class="cfg-card">
+        <div class="ct"><div style="display:flex;align-items:center;gap:10px;"><div class="ci" style="background:rgba(244,114,182,.16);">🎁</div><h4>בונוס קבלת פנים</h4></div></div>
+        <div class="desc">נקודות למשתמש חדש שהוזמן.</div>
+        <div class="stepper"><div class="sbtn">−</div><div class="sbox">50</div><div class="sbtn">+</div></div>
+      </div>
+      <div class="cfg-card">
+        <div class="ct"><div style="display:flex;align-items:center;gap:10px;"><div class="ci" style="background:rgba(139,92,246,.2);">👥</div><h4>מקס' הזמנות / משתמש</h4></div></div>
+        <div class="desc">תקרת תגמול להזמנות (0 = ללא הגבלה).</div>
+        <div class="stepper"><div class="sbtn">−</div><div class="sbox">0</div><div class="sbtn">+</div></div>
+      </div>
+      <div class="cfg-card" style="justify-content:center;align-items:center;text-align:center;border-style:dashed;gap:7px;">
+        <div class="ci" style="background:rgba(91,140,255,.16);">🆔</div>
+        <h4>Project ID</h4>
+        <code style="font-family:'Consolas',monospace;font-size:12px;color:#8ab4ff;direction:ltr;">proj_demo_local</code>
+      </div>
+    </div>
+    <div class="save-bar">
+      <span style="color:var(--muted);">✓ כל השינויים מסונכרנים</span>
+      <button class="btn-sync">🔄 Save &amp; Sync</button>
+    </div>
+    <div class="ov-card" style="margin-bottom:0;">
+      <div class="ov-title"><h3>📜 לוג שינויי תצורה (Audit)</h3><span class="ev-badge t-indigo">היסטוריה מלאה</span></div>
+      <table class="ov-table">
+        <thead><tr><th>שדה</th><th>לפני</th><th>אחרי</th><th class="r">שונה ב- (UTC)</th></tr></thead>
+        <tbody>
+          <tr><td class="mono" style="color:#8ab4ff;">points_per_referral</td><td class="mono" style="color:#fb7185;text-decoration:line-through;">75</td><td class="mono" style="color:#34d399;">100</td><td class="r mono">2026-06-10 14:22</td></tr>
+          <tr><td class="mono" style="color:#8ab4ff;">rate_limit_per_minute</td><td class="mono" style="color:#fb7185;text-decoration:line-through;">5</td><td class="mono" style="color:#34d399;">10</td><td class="r mono">2026-06-08 09:11</td></tr>
+          <tr><td class="mono" style="color:#8ab4ff;">welcome_bonus</td><td class="mono" style="color:#fb7185;text-decoration:line-through;">0</td><td class="mono" style="color:#34d399;">50</td><td class="r mono">2026-06-05 17:48</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Modal 04 — Viral Growth Simulator ============ -->
+<div class="modal-overlay" id="modal-sim" role="dialog" aria-modal="true" aria-label="סימולטור צמיחה">
+  <div class="modal-panel">
+    <button class="modal-close" data-close title="סגור (Esc)">✕</button>
+    <div class="modal-head">
+      <div class="eyebrow">🧮 פורטל · מסך 04 — Viral Growth Simulator</div>
+      <h2>סימולטור צמיחה — <span class="grad-text">חיזוי ויראלי</span></h2>
+      <p class="sub">מידול מקדם K והשוואת מסלולי צמיחה מול גיוס בתשלום — חישוב מלא בצד הלקוח.</p>
+    </div>
+    <div class="ov-card">
+      <div class="ov-title"><h3>🎚️ פרמטרי סימולציה</h3></div>
+      <div class="sim-params">
+        <div class="sim-param"><div class="sp-top"><span class="lbl">Seed Users (N₀)</span><span class="val">500</span></div><div class="slider"><div class="sf" style="width:5%"></div><div class="sh" style="left:5%"></div></div></div>
+        <div class="sim-param"><div class="sp-top"><span class="lbl">Viral K-Factor</span><span class="val" style="color:#34d399;">1.30</span></div><div class="slider"><div class="sf" style="width:41%"></div><div class="sh" style="left:41%"></div></div></div>
+        <div class="sim-param"><div class="sp-top"><span class="lbl">Generations</span><span class="val">10</span></div><div class="slider"><div class="sf" style="width:44%"></div><div class="sh" style="left:44%"></div></div></div>
+      </div>
+      <div class="sim-banner">🚀 Viral! K = 1.30 &gt; 1 — כל משתמש מביא יותר ממשתמש אחד חדש. הצמיחה על-לינארית.</div>
+    </div>
+    <div class="ov-stats">
+      <div class="ov-stat"><div class="top"><div class="si">👥</div></div><div class="v">28,206</div><div class="l">סה"כ משתמשים ויראליים</div></div>
+      <div class="ov-stat"><div class="top"><div class="si em">📈</div></div><div class="v">27,706</div><div class="l">חדשים שהגיעו דרך ה-SDK</div></div>
+      <div class="ov-stat"><div class="top"><div class="si sky">⚡</div></div><div class="v">4.03×</div><div class="l">מכפיל ויראלי מול תשלום</div></div>
+      <div class="ov-stat"><div class="top"><div class="si am">📊</div></div><div class="v">7,000</div><div class="l">שווה-ערך בגיוס בתשלום</div></div>
+    </div>
+    <div class="ov-card">
+      <div class="ov-title"><h3>📈 עקומת צמיחה חזויה</h3><span class="ev-badge t-green">Viral · K = 1.30</span></div>
+      <svg viewBox="0 0 300 120" preserveAspectRatio="none" style="width:100%;height:200px;display:block;">
+        <defs>
+          <linearGradient id="vgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#6366f1" stop-opacity=".45"/><stop offset="100%" stop-color="#6366f1" stop-opacity="0"/></linearGradient>
+          <linearGradient id="pgrad" x1="0" y1="0" x2="0" y2="1"><stop offset="0%" stop-color="#f59e0b" stop-opacity=".35"/><stop offset="100%" stop-color="#f59e0b" stop-opacity="0"/></linearGradient>
+        </defs>
+        <path d="M0,108 L300,70 L300,120 L0,120 Z" fill="url(#pgrad)"/>
+        <path d="M0,108 L300,70" fill="none" stroke="#f59e0b" stroke-width="2" vector-effect="non-scaling-stroke"/>
+        <path d="M0,110 L43,107 L86,102 L129,93 L172,80 L215,60 L258,32 L300,6 L300,120 L0,120 Z" fill="url(#vgrad)"/>
+        <path d="M0,110 L43,107 L86,102 L129,93 L172,80 L215,60 L258,32 L300,6" fill="none" stroke="#818cf8" stroke-width="2.5" vector-effect="non-scaling-stroke"/>
+      </svg>
+      <div style="display:flex;gap:18px;margin-top:8px;font-size:11.5px;color:var(--muted);">
+        <span><span style="color:#818cf8;">●</span> Viral (SDK)</span>
+        <span><span style="color:#f59e0b;">●</span> Paid Acquisition</span>
+      </div>
+    </div>
+    <div class="ov-grid" style="margin-bottom:0;">
+      <div class="ov-card" style="margin-bottom:0;">
+        <div class="ov-title"><h3>🧮 צמיחה ויראלית (SDK)</h3></div>
+        <div class="codeblock"><span class="cm"># users(G) = N₀ × K^G</span><br><span class="fn2">total(G)</span> = N₀ × (K^(G+1)−1) / (K−1)<br><br>N₀=500 · K=1.30 · G=10<br><span class="str">→ 28,206 users total</span></div>
+      </div>
+      <div class="ov-card" style="margin-bottom:0;">
+        <div class="ov-title"><h3>💰 גיוס בתשלום (בסיס)</h3></div>
+        <div class="codeblock"><span class="cm"># constant N₀×K each period</span><br><span class="fn2">total(G)</span> = N₀ + G × (N₀ × K)<br><br>N₀=500 · K=1.30 · G=10<br><span style="color:#fbbf24;">→ 7,000 users total</span></div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Modal 05 — SDK Playground ============ -->
+<div class="modal-overlay" id="modal-playground" role="dialog" aria-modal="true" aria-label="מגרש משחקים">
+  <div class="modal-panel">
+    <button class="modal-close" data-close title="סגור (Esc)">✕</button>
+    <div class="modal-head">
+      <div class="eyebrow">🧪 פורטל · מסך 05 — SDK Playground</div>
+      <h2>מגרש משחקים — <span class="grad-text">בדיקת API חי</span></h2>
+      <p class="sub">כל בקשה פוגעת בשרת Flask האמיתי וב-PostgreSQL — שום דבר לא מדומה.</p>
+    </div>
+    <div class="pg-grid">
+      <div class="pg-card">
+        <div class="pgt"><h4>① יצירת קוד הזמנה</h4><span class="ev-badge t-indigo">POST /referral/generate</span></div>
+        <input class="pg-input" value="user_id: user_alice" readonly>
+        <button class="pg-run">▶ שלח בקשה</button>
+        <div class="json">{
+  "invite_code": "A1B2C3D4",
+  "invite_url": "https://app.io/i/A1B2C3D4",
+  "user_id": "user_alice"
+}</div>
+      </div>
+      <div class="pg-card">
+        <div class="pgt"><h4>② ייחוס המרה</h4><span class="ev-badge t-blue">POST /referral/track</span></div>
+        <input class="pg-input" value="code: A1B2C3D4 · stage: attributed" readonly>
+        <button class="pg-run">▶ שלח בקשה</button>
+        <div class="json">{
+  "status": "attributed",
+  "inviter": "user_alice",
+  "points_awarded": 100,
+  "inviter_balance": 350
+}</div>
+      </div>
+      <div class="pg-card">
+        <div class="pgt"><h4>③ בדיקת יתרה</h4><span class="ev-badge t-amber">GET /referral/balance</span></div>
+        <input class="pg-input" value="user_id: user_alice" readonly>
+        <button class="pg-run">▶ שלח בקשה</button>
+        <div class="json">{
+  "user_id": "user_alice",
+  "points_balance": 350,
+  "total_referrals": 4
+}</div>
+      </div>
+      <div class="pg-card">
+        <div class="pgt"><h4>④ בונוס יומי</h4><span class="ev-badge t-green">POST /referral/daily-bonus</span></div>
+        <input class="pg-input" value="user_id: user_alice" readonly>
+        <button class="pg-run">🎁 קבל בונוס</button>
+        <div class="json">{
+  "points_awarded": 2,
+  "points_balance": 352,
+  "next_claim_in": "23:59:58"
+}</div>
+      </div>
+    </div>
+    <div class="ov-card" style="margin:15px 0 0;">
+      <div class="ov-title"><h3>🔍 מציג בקשה גולמית (Request Inspector)</h3><span class="ev-badge t-amber">x-api-key + x-project-id</span></div>
+      <div class="codeblock"><span style="color:#fbbf24;">POST</span> <span style="color:#8ab4ff;">/api/referral/generate</span><br><span class="cm">x-api-key:</span> demo_api_key_local_dev<br><span class="cm">x-project-id:</span> proj_demo_local<br><br><span class="cm">Body:</span><br>{ "user_id": "user_alice" }</div>
+    </div>
+  </div>
+</div>
+
+<!-- ============ Modal 06 — SDK Integration Guide ============ -->
+<div class="modal-overlay" id="modal-docs" role="dialog" aria-modal="true" aria-label="מדריך אינטגרציה">
+  <div class="modal-panel">
+    <button class="modal-close" data-close title="סגור (Esc)">✕</button>
+    <div class="modal-head">
+      <div class="eyebrow">📚 פורטל · מסך 06 — SDK Integration Guide</div>
+      <h2>מדריך אינטגרציה — <span class="grad-text">למפתח</span></h2>
+      <p class="sub">כל מה שמפתח צריך כדי לחבר את ה-SDK: אימות, ארבע הפונקציות המרכזיות וטיפול בשגיאות.</p>
+    </div>
+    <div class="ov-card">
+      <div class="ov-title"><h3>🌐 ארכיטקטורת המערכת</h3></div>
+      <div class="arch">
+        <div class="arch-node"><div class="an-i">📱</div><div class="an-t">Host App</div><div class="an-s">האפליקציה שלך</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node"><div class="an-i">⚡</div><div class="an-t">Virality SDK</div><div class="an-s">Python / JS</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node"><div class="an-i">🖥️</div><div class="an-t">REST API</div><div class="an-s">Flask · Auth</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node"><div class="an-i">🗄️</div><div class="an-t">PostgreSQL</div><div class="an-s">Users · Events</div></div>
+        <div class="arch-arrow">→</div>
+        <div class="arch-node"><div class="an-i">📊</div><div class="an-t">Portal</div><div class="an-s">Insights · Config</div></div>
+      </div>
+    </div>
+    <div class="ov-grid">
+      <div class="ov-card">
+        <div class="ov-title"><h3>🔑 פרטי הגישה שלך</h3><span class="ev-badge t-amber">Required headers</span></div>
+        <div class="cred-grid">
+          <div class="cred"><div class="cl">API Key</div><code style="color:#34d399;direction:ltr;font-family:'Consolas',monospace;">demo_api_key_local_dev</code></div>
+          <div class="cred"><div class="cl">Project ID</div><code style="color:#8ab4ff;direction:ltr;font-family:'Consolas',monospace;">proj_demo_local</code></div>
+        </div>
+        <p style="font-size:11.5px;color:var(--muted-2);margin-top:10px;">שתי הכותרות נדרשות בכל בקשה. שמור על ה-API Key בסוד.</p>
+      </div>
+      <div class="ov-card">
+        <div class="ov-title"><h3>⚡ התחלה מהירה</h3></div>
+        <div class="qsteps" style="grid-template-columns:1fr 1fr;">
+          <div class="qstep"><span class="qn">1</span><div><b>Init SDK</b><p>client עם API Key + Project ID</p></div></div>
+          <div class="qstep"><span class="qn">2</span><div><b>Generate</b><p>generate_invite() לכל משתמש</p></div></div>
+          <div class="qstep"><span class="qn">3</span><div><b>Track</b><p>click → install → attributed</p></div></div>
+          <div class="qstep"><span class="qn">4</span><div><b>Reward</b><p>בדיקת יתרה ומימוש נקודות</p></div></div>
+        </div>
+      </div>
+    </div>
+    <div class="ov-card">
+      <div class="ov-title"><h3>🐍 דוגמת קוד — Python</h3><span class="ev-badge t-green">מוכן להעתקה</span></div>
+      <div class="codeblock"><span class="cm"># Initialize once at app startup</span><br>sdk = <span class="fn2">ViralitySDK</span>(<br>&nbsp;&nbsp;&nbsp;&nbsp;api_key=<span class="str">"demo_api_key_local_dev"</span>,<br>&nbsp;&nbsp;&nbsp;&nbsp;project_id=<span class="str">"proj_demo_local"</span>,<br>&nbsp;&nbsp;&nbsp;&nbsp;base_url=<span class="str">"http://your-server.com/api"</span>,<br>)<br><br><span class="cm"># Step 1 — create a shareable invite link</span><br>link = sdk.<span class="fn2">generate_invite</span>(<span class="str">"user_42"</span>)<br><span class="kw">print</span>(link[<span class="str">"invite_url"</span>])&nbsp;&nbsp;<span class="cm"># share with the user</span></div>
+    </div>
+    <div class="ov-card" style="margin-bottom:0;">
+      <div class="ov-title"><h3>📋 חלק מ-API Reference</h3><span class="ev-badge t-indigo">14 endpoints</span></div>
+      <table class="ov-table">
+        <thead><tr><th>Method</th><th>Endpoint</th><th>תיאור</th><th class="r">Auth</th></tr></thead>
+        <tbody>
+          <tr><td><span class="ev-badge t-green">POST</span></td><td class="mono">/referral/generate</td><td>יצירת קוד הזמנה</td><td class="r"><span class="ev-badge t-amber">API Key</span></td></tr>
+          <tr><td><span class="ev-badge t-green">POST</span></td><td class="mono">/referral/track</td><td>ייחוס שלב במשפך</td><td class="r"><span class="ev-badge t-amber">API Key</span></td></tr>
+          <tr><td><span class="ev-badge t-blue">GET</span></td><td class="mono">/referral/balance</td><td>יתרת נקודות</td><td class="r"><span class="ev-badge t-amber">API Key</span></td></tr>
+          <tr><td><span class="ev-badge t-green">POST</span></td><td class="mono">/referral/claim</td><td>מימוש תגמול</td><td class="r"><span class="ev-badge t-amber">API Key</span></td></tr>
+          <tr><td><span class="ev-badge t-amber">PUT</span></td><td class="mono">/admin/config</td><td>עדכון תצורה (Save &amp; Sync)</td><td class="r"><span class="ev-badge t-amber">API Key</span></td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+</div>
+
+<div class="nav">
+  <button id="prev" title="הקודם"><</button>
+  <span class="counter" id="counter">1 / 10</span>
+  <button id="next" title="הבא">></button>
+</div>
+
+<div class="brand-tag">Virality <b>SDK</b> · פרויקט גמר 2026</div>
+
+<script>
+  (function () {
+    var slides = Array.prototype.slice.call(document.querySelectorAll('.slide'));
+    var total = slides.length;
+    var current = 0;
+
+    var prevBtn = document.getElementById('prev');
+    var nextBtn = document.getElementById('next');
+    var counter = document.getElementById('counter');
+    var dotsWrap = document.getElementById('dots');
+    var progress = document.getElementById('progress');
+    var deck = document.getElementById('deck');
+
+    // ---- Auto-fit: scale the whole slide down so it always fits the screen ----
+    var DESIGN_W = 1220, DESIGN_H = 780;
+    function fit() {
+      var marginX = 40, marginTop = 24, marginBottom = 96; // keep clear of bottom nav
+      var availW = window.innerWidth - marginX * 2;
+      var availH = window.innerHeight - marginTop - marginBottom;
+      var scale = Math.min(availW / DESIGN_W, availH / DESIGN_H, 1);
+      var lift = (marginTop - marginBottom) / 2; // bias upward to clear the nav bar
+      deck.style.transform = 'translateY(' + lift + 'px) scale(' + scale + ')';
+    }
+    window.addEventListener('resize', fit);
+    window.addEventListener('load', fit);
+    fit();
+
+    slides.forEach(function (_, i) {
+      var d = document.createElement('span');
+      d.title = 'שקופית ' + (i + 1);
+      d.addEventListener('click', function () { go(i); });
+      dotsWrap.appendChild(d);
+    });
+    var dots = Array.prototype.slice.call(dotsWrap.children);
+
+    function render() {
+      slides.forEach(function (s, i) { s.classList.toggle('active', i === current); });
+      dots.forEach(function (d, i) { d.classList.toggle('on', i === current); });
+      counter.textContent = (current + 1) + ' / ' + total;
+      prevBtn.disabled = current === 0;
+      nextBtn.disabled = current === total - 1;
+      progress.style.width = ((current + 1) / total * 100) + '%';
+      slides[current].scrollTop = 0;
+    }
+
+    function go(i) { current = Math.max(0, Math.min(total - 1, i)); render(); }
+
+    nextBtn.addEventListener('click', function () { go(current + 1); });
+    prevBtn.addEventListener('click', function () { go(current - 1); });
+
+    // ---- Portal screen modals (slide 4 cards open them) ----
+    var overlays = Array.prototype.slice.call(document.querySelectorAll('.modal-overlay'));
+    function anyModalOpen() { return overlays.some(function (o) { return o.classList.contains('open'); }); }
+    function closeAllModals() { overlays.forEach(function (o) { o.classList.remove('open'); }); }
+    document.querySelectorAll('.pcard.clickable').forEach(function (card) {
+      card.addEventListener('click', function () {
+        var m = document.getElementById('modal-' + card.getAttribute('data-modal'));
+        if (m) m.classList.add('open');
+      });
+    });
+    overlays.forEach(function (o) {
+      o.addEventListener('click', function (e) { if (e.target === o) o.classList.remove('open'); });
+    });
+    document.querySelectorAll('[data-close]').forEach(function (btn) {
+      btn.addEventListener('click', closeAllModals);
+    });
+
+    // RTL keyboard: ArrowLeft = next, ArrowRight = prev
+    document.addEventListener('keydown', function (e) {
+      if (anyModalOpen()) { if (e.key === 'Escape') closeAllModals(); return; }
+      if (e.key === 'ArrowLeft' || e.key === 'PageDown' || e.key === ' ') { e.preventDefault(); go(current + 1); }
+      else if (e.key === 'ArrowRight' || e.key === 'PageUp') { e.preventDefault(); go(current - 1); }
+      else if (e.key === 'Home') { go(0); }
+      else if (e.key === 'End') { go(total - 1); }
+    });
+
+    render();
+  })();
+</script>
+</body>
+</html>

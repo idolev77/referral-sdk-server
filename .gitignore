@@ -43,3 +43,8 @@ desktop.ini
 *.log
 *.sqlite3
 *.db
+
+# ─── Internal docs / working files (not for the repo) ───────────────────────
+DAILY_BONUS_SDK_PROMPT.md
+PROJECT_PRESENTATION.md
+SDK_INTEGRATION_GUIDE.md
