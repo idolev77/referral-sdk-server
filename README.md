@@ -5,7 +5,7 @@
 | # | What | File / Location |
 |---|------|-----------------|
 | 1 | **Developer landing page** — the SDK marketing page | [`docs/index.html`](docs/index.html) *(download the whole `docs/` folder — see [docs/README.md](docs/README.md))* |
-| 2 | **Video** — narrated SDK explainer | [`Virality SDK Explainer (with narration).html`](Virality%20SDK%20Explainer%20(with%20narration).html) |
+| 2 | **Video** — narrated SDK explainer | [`Virality SDK Explainer (with narration).html`](Virality%20SDK%20Explainer%20(with%20narration).html) (download it) |
 | 3 | **Presentation** — `presentation.html` | In the course-site submission box, together with the Git link |
 
 ---
