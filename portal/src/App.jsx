@@ -11,6 +11,7 @@ import {
   TrendingUp,
   BookOpen,
   Sparkles,
+  GitBranch,
 } from "lucide-react";
 
 import DashboardOverview from "./components/DashboardOverview.jsx";
@@ -20,6 +21,7 @@ import CampaignSettings from "./components/CampaignSettings.jsx";
 import GrowthSimulator from "./components/GrowthSimulator.jsx";
 import SdkPlayground from "./components/SdkPlayground.jsx";
 import IntegrationGuide from "./components/IntegrationGuide.jsx";
+import ArchitectureDiagrams from "./components/ArchitectureDiagrams.jsx";
 
 const NAV = [
   { id: "overview", label: "Overview", icon: LayoutDashboard, Component: DashboardOverview },
@@ -29,6 +31,7 @@ const NAV = [
   { id: "simulator", label: "Growth Simulator", icon: TrendingUp, Component: GrowthSimulator },
   { id: "playground", label: "SDK Playground", icon: FlaskConical, Component: SdkPlayground },
   { id: "guide", label: "Integration Guide", icon: BookOpen, Component: IntegrationGuide },
+  { id: "diagrams", label: "Architecture Diagrams", icon: GitBranch, Component: ArchitectureDiagrams },
 ];
 
 export default function App() {
