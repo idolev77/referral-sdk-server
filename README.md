@@ -15,11 +15,11 @@ A production-ready, drop-in referral engine for mobile and web apps — with a f
 Three screens from a host app with the **Virality SDK** integrated — referral engine, points economy, and the daily login bonus, all powered by the same backend.
 
 <p align="center">
-  <img src="docs/app-invite.png" width="245" alt="Invite & Earn — referral engine" />
+  <img src="docs/assets/app-invite.png" width="245" alt="Invite & Earn — referral engine" />
   &nbsp;&nbsp;
-  <img src="docs/app-rewards.png" width="245" alt="Rewards — points economy" />
+  <img src="docs/assets/app-rewards.png" width="245" alt="Rewards — points economy" />
   &nbsp;&nbsp;
-  <img src="docs/app-daily.png" width="245" alt="Daily Bonus — login streak" />
+  <img src="docs/assets/app-daily.png" width="245" alt="Daily Bonus — login streak" />
 </p>
 
 <p align="center">
@@ -29,7 +29,7 @@ Three screens from a host app with the **Virality SDK** integrated — referral 
 ### Developer Portal
 
 <p align="center">
-  <img src="docs/portal-overview.png" width="640" alt="Developer Portal — Overview dashboard" />
+  <img src="docs/assets/portal-overview.png" width="640" alt="Developer Portal — Overview dashboard" />
 </p>
 
 > Live developer portal — KPI cards, conversion funnel, referral trend and real-time activity feed.
