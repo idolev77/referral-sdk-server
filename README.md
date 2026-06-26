@@ -18,15 +18,17 @@ A production-ready, drop-in referral engine for mobile and web apps — with a f
   <img src="docs/screenshot-campaign.png" width="280" alt="Campaign Manager" />
 </p>
 <p align="center">
+  <img src="docs/screenshot-geo.png" width="280" alt="Demographics & Stability" />
+  &nbsp;&nbsp;
   <img src="docs/screenshot-playground.png" width="280" alt="SDK Playground" />
   &nbsp;&nbsp;
   <img src="docs/screenshot-diagrams.png" width="280" alt="Architecture Diagrams" />
-  &nbsp;&nbsp;
-  <img src="docs/screenshot-guide.png" width="280" alt="Integration Guide" />
+</p>
+<p align="center">
+  <img src="docs/screenshot-guide.png" width="600" alt="Integration Guide" />
 </p>
 
-> Screenshots from the live developer portal at `http://localhost:5173`.  
-> Place your own screenshots in the `docs/` folder to populate the images above.
+> Real screenshots captured from the live developer portal (`http://localhost:5173`) via Playwright headless Chromium.
 
 ---
 
@@ -238,14 +240,16 @@ graph TB
 
 ## USING
 
-### Option A — Docker (recommended, one command)
+### Part 1 — Running the Server
+
+#### Option A — Docker (recommended, one command)
 
 ```powershell
 cd server_SDK
 docker compose up --build -d
 ```
 
-This starts PostgreSQL 16, Redis 7, and Flask in isolated containers. A demo project is seeded automatically on first boot.
+Starts PostgreSQL 16, Redis 7, and Flask in isolated containers. A demo project is seeded automatically on first boot.
 
 | | |
 |---|---|
@@ -253,54 +257,226 @@ This starts PostgreSQL 16, Redis 7, and Flask in isolated containers. A demo pro
 | Demo `x-project-id` | `proj_demo_local` |
 | Demo `x-api-key` | `demo_api_key_local_dev` |
 
----
-
-### Option B — Manual (local Python + running Postgres + Redis)
-
-**Backend:**
+#### Option B — Manual
 
 ```powershell
+# Backend
 cd backend
-python -m venv .venv
-.\.venv\Scripts\Activate.ps1
+python -m venv .venv && .\.venv\Scripts\Activate.ps1
 pip install -r requirements.txt
-Copy-Item .env.example .env      # edit DATABASE_URL and REDIS_URL
+Copy-Item .env.example .env      # set DATABASE_URL + REDIS_URL
 python app.py                    # → http://localhost:5000
-```
 
-**Developer Portal:**
-
-```powershell
+# Developer Portal (separate terminal)
 cd portal
-npm install
-npm run dev                      # → http://localhost:5173
+npm install && npm run dev       # → http://localhost:5173
 ```
-
-Vite auto-proxies `/api` → `http://localhost:5000`, so the portal works out of the box.
 
 ---
 
-### Quick Smoke-test (cURL)
+### Part 2 — Integrating the SDK into Your App (Developer Guide)
+
+The SDK is a thin HTTP wrapper — no library to install on your side. You send REST calls with two auth headers and the server handles everything else.
+
+#### Step 0 — Authentication headers
+
+Every SDK request must include:
+
+```
+x-api-key:     <your project api key>
+x-project-id:  <your project id>
+```
+
+You can find both in the **Campaign Manager** tab of the developer portal, or use the demo credentials above for local testing.
+
+---
+
+#### Step 1 — Initialize (Python)
+
+```python
+import requests
+
+class ViralitySDK:
+    def __init__(self, api_key: str, project_id: str, base_url: str):
+        self.base_url = base_url.rstrip("/")
+        self.session  = requests.Session()
+        self.session.headers.update({
+            "x-api-key":    api_key,
+            "x-project-id": project_id,
+            "Content-Type": "application/json",
+        })
+
+# Create once at app startup — reuse the session for connection pooling
+sdk = ViralitySDK(
+    api_key    = "demo_api_key_local_dev",
+    project_id = "proj_demo_local",
+    base_url   = "http://localhost:5000",
+)
+```
+
+#### Step 1 — Initialize (JavaScript / React Native)
+
+```js
+const SDK_HEADERS = {
+  "x-api-key":    "demo_api_key_local_dev",
+  "x-project-id": "proj_demo_local",
+  "Content-Type": "application/json",
+};
+const BASE = "http://localhost:5000";
+
+const sdk = {
+  post: (path, body) =>
+    fetch(`${BASE}${path}`, { method: "POST", headers: SDK_HEADERS, body: JSON.stringify(body) })
+      .then(r => r.json()),
+  get: (path) =>
+    fetch(`${BASE}${path}`, { headers: SDK_HEADERS }).then(r => r.json()),
+};
+```
+
+---
+
+#### Step 2 — Generate an invite link for each user
+
+Call this once per user when they first open the sharing screen. If the user already has a code the server returns the existing one (idempotent).
+
+```python
+def generate_invite(self, user_id: str) -> dict:
+    r = self.session.post(f"{self.base_url}/api/referral/generate",
+                          json={"user_id": user_id})
+    r.raise_for_status()
+    return r.json()
+
+result = sdk.generate_invite("alice")
+share_url = result["invite_link"]   # → "http://yourserver/i/AB3XKT9F"
+deep_link  = result["deep_link"]    # → "referralsdk://invite?code=AB3XKT9F"
+```
+
+Show `invite_link` on the share sheet or send `deep_link` as a push notification.
+
+---
+
+#### Step 3 — Track the referral funnel
+
+Fire this as the new user moves through the funnel. The server awards points automatically on `"attributed"`.
+
+```python
+def track(self, invite_code: str, new_user_id: str, stage: str) -> dict:
+    # stage: "click" | "install" | "attributed"
+    r = self.session.post(f"{self.base_url}/api/referral/track",
+                          json={"invite_code": invite_code,
+                                "new_user_id": new_user_id,
+                                "stage": stage})
+    r.raise_for_status()
+    return r.json()
+
+# When Bob installs via Alice's link:
+result = sdk.track("AB3XKT9F", "bob", "attributed")
+print(result["points_awarded"])   # 100 — Alice's new points
+```
+
+> If your app uses a deep-link scheme, the `/i/<code>/open` web page fires attribution automatically on tap — no extra SDK call needed.
+
+---
+
+#### Step 4 — Show the user their points balance
+
+```python
+def get_balance(self, user_id: str) -> int:
+    r = self.session.get(f"{self.base_url}/api/referral/balance",
+                         params={"user_id": user_id})
+    r.raise_for_status()
+    return r.json()["points_balance"]
+
+print(sdk.get_balance("alice"))   # 100
+```
+
+Balance reads are Redis-cached (15 s) — safe to call on every screen open.
+
+---
+
+#### Step 5 — Claim a reward
+
+```python
+def claim_reward(self, user_id: str, cost: int) -> dict:
+    r = self.session.post(f"{self.base_url}/api/referral/claim",
+                          json={"user_id": user_id, "cost": cost})
+    if r.status_code == 402:
+        raise ValueError(f"Not enough points: {r.json()['balance']}")
+    r.raise_for_status()
+    return r.json()   # {"status": "ok", "points_balance": 0}
+
+sdk.claim_reward("alice", cost=100)
+```
+
+---
+
+#### Step 6 — Daily login bonus
+
+```python
+def daily_bonus(self, user_id: str) -> dict:
+    r = self.session.post(f"{self.base_url}/api/referral/daily-bonus",
+                          json={"user_id": user_id})
+    if r.status_code == 429:
+        data = r.json()
+        print(f"Already claimed. Retry in {data['retry_after_seconds']}s")
+        return data
+    r.raise_for_status()
+    return r.json()   # {"status": "ok", "points_awarded": 2, "points_balance": 102}
+```
+
+Call this on app open — the server enforces the 24-hour UTC cooldown server-side.
+
+---
+
+#### Step 7 — Hot-reload remote config (no redeploy needed)
+
+```python
+def get_config(self) -> dict:
+    r = self.session.get(f"{self.base_url}/api/referral/config")
+    r.raise_for_status()
+    return r.json()
+
+config = sdk.get_config()
+reward_pts    = config["points_per_referral"]   # driven by Campaign Manager
+welcome_bonus = config["welcome_bonus"]
+fraud_enabled = config["fraud_detection_enabled"]
+```
+
+Change reward values in the portal's **Campaign Manager → Save & Sync**. The next `get_config()` call anywhere in the world picks up the new values instantly — no redeploy.
+
+---
+
+#### Error reference
+
+| HTTP | When it happens | What to do |
+|------|----------------|-----------|
+| `400` | Missing `user_id`, `invite_code`, or `cost` | Fix the request payload |
+| `401` | Wrong or missing `x-api-key` / `x-project-id` | Check your credentials |
+| `402` | `claim_reward` called with insufficient balance | Show the user their balance first |
+| `404` | `invite_code` not found | The code was never generated |
+| `409` | `generate` called but user already has a code | Reuse the returned `invite_code` |
+| `429` | Anti-fraud rate limit or daily-bonus cooldown | Back off; check `retry_after_seconds` |
+| `500` | Server error | Retry with exponential back-off |
+
+---
+
+#### Quick Smoke-test (cURL)
 
 ```bash
-# 1. Generate an invite link for a user
+# 1. Generate invite link
 curl -s -X POST http://localhost:5000/api/referral/generate \
-  -H "x-api-key: demo_api_key_local_dev" \
-  -H "x-project-id: proj_demo_local" \
-  -H "Content-Type: application/json" \
-  -d '{"user_id": "alice"}'
+  -H "x-api-key: demo_api_key_local_dev" -H "x-project-id: proj_demo_local" \
+  -H "Content-Type: application/json" -d '{"user_id": "alice"}'
 
-# 2. Attribute the referral (awards points to alice)
+# 2. Attribute referral (awards 100 pts to alice)
 curl -s -X POST http://localhost:5000/api/referral/track \
-  -H "x-api-key: demo_api_key_local_dev" \
-  -H "x-project-id: proj_demo_local" \
+  -H "x-api-key: demo_api_key_local_dev" -H "x-project-id: proj_demo_local" \
   -H "Content-Type: application/json" \
   -d '{"invite_code": "AB3XKT9F", "new_user_id": "bob", "stage": "attributed"}'
 
-# 3. Check alice's balance
+# 3. Check balance
 curl -s "http://localhost:5000/api/referral/balance?user_id=alice" \
-  -H "x-api-key: demo_api_key_local_dev" \
-  -H "x-project-id: proj_demo_local"
+  -H "x-api-key: demo_api_key_local_dev" -H "x-project-id: proj_demo_local"
 ```
 
 ---
