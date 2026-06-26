@@ -1,12 +1,12 @@
 # Gamified Referral & Virality SDK
 
-## 🎓 למרצה — איפה נמצא כל דבר
+## 🎓 For the Lecturer — Where to Find Each Item
 
-| # | מה | קובץ / מיקום |
-|---|-----|--------------|
-| 1 | **פרסומת למפתחים** — דף הנחיתה של ה-SDK | [`docs/index.html`](docs/index.html) *(להורדה: כל תיקיית `docs/`, ראו [docs/README.md](docs/README.md))* |
-| 2 | **סרטון** — הסבר על ה-SDK עם קריינות | [`Virality SDK Explainer (with narration).html`](Virality%20SDK%20Explainer%20(with%20narration).html) |
-| 3 | **מצגת** — `presentation.html` | בתיבת ההגשה באתר הקורס, יחד עם הקישור לגיט |
+| # | What | File / Location |
+|---|------|-----------------|
+| 1 | **Developer landing page** — the SDK marketing page | [`docs/index.html`](docs/index.html) *(download the whole `docs/` folder — see [docs/README.md](docs/README.md))* |
+| 2 | **Video** — narrated SDK explainer | [`Virality SDK Explainer (with narration).html`](Virality%20SDK%20Explainer%20(with%20narration).html) |
+| 3 | **Presentation** — `presentation.html` | In the course-site submission box, together with the Git link |
 
 ---
 
