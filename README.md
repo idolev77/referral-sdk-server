@@ -1,5 +1,15 @@
 # Gamified Referral & Virality SDK
 
+## 🎓 למרצה — איפה נמצא כל דבר
+
+| # | מה | קובץ / מיקום |
+|---|-----|--------------|
+| 1 | **פרסומת למפתחים** — דף הנחיתה של ה-SDK | [`docs/index.html`](docs/index.html) *(להורדה: כל תיקיית `docs/`, ראו [docs/README.md](docs/README.md))* |
+| 2 | **סרטון** — הסבר על ה-SDK עם קריינות | [`Virality SDK Explainer (with narration).html`](Virality%20SDK%20Explainer%20(with%20narration).html) |
+| 3 | **מצגת** — `presentation.html` | בתיבת ההגשה באתר הקורס, יחד עם הקישור לגיט |
+
+---
+
 A production-ready, drop-in referral engine for mobile and web apps — with a full-featured developer portal. Integrate in hours, not weeks.
 
 > **📱 Companion Android SDK** — the client-side Kotlin SDK and showcase demo app
